@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  font-size: 100%;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1f1b2e;
+  --app-primary-main: #1687a7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #f6f5f5;
+}
+
+h1 {
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-container {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.app-container main {
+  grid-row: 2;
+  min-height: 0;
+}
+
+.app-container footer {
+  grid-row: 3;
+}
+
+@media (max-width: 960px) {
+  .app-navbar-offset {
+    height: var(--app-navbar-mobile-offset);
+  }
+}
+
+footer {
+  background-color: var(--app-primary-main);
+  color: #f6f5f5;
+}
+
+.banner {
+  width: 100%;
+  max-height: 420px;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+  background-color: #d3e0ea;
+}
+
+.banner .MuiContainer-root {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.flash-sale-timer {
+  display: flex;
+  border-radius: 32px;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+}
+
+.slogan-container {
+  position: relative;
+  height: 320px;
+  background-color: #0b1727;
+  background-image:
+    linear-gradient(135deg, rgba(5, 10, 25, 0.82), rgba(9, 18, 38, 0.55)),
+    url('/Mountain.webp');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+
+.slogan-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 10, 25, 0.7), rgba(5, 10, 25, 0.3));
+  pointer-events: none;
+}
+
+.slogan-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+.slogan-container .slogan-text {
+  font-size: 48px;
+  font-weight: 700;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
