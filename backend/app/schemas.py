@@ -1,8 +1,7 @@
 # Global schemas
 
 from pydantic import BaseModel, ConfigDict
-from typing import Any, Optional, Generic, TypeVar
-from fastapi.responses import JSONResponse
+from typing import Optional
 from app.products.schemas import ProductBase
 from app.user.schemas import User
 from app.categories.schemas import Category as CategorySchema
