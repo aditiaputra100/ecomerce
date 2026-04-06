@@ -12,7 +12,6 @@ import {
   useTheme,
 } from '@mui/material'
 import {
-  Error as ErrorIcon, 
   OfflineBolt as OfflineBoltIcon,
   ArrowRight as ArrowRightIcon,
   ArrowLeft as ArrowLeftIcon
@@ -23,6 +22,7 @@ import type { Product } from '../types/api'
 import Banner from '../components/Banner'
 import CategoryList from '../components/CategoryList'
 import Timer from '../components/Timer'
+import EmptyItem from '../components/EmptyItem'
 
 const HomePage = () => {
   const theme = useTheme()
@@ -99,18 +99,7 @@ const HomePage = () => {
                 }
                 {(!loading && !error) && productsShowcase.length == 0 ? 
                   (
-                      <Grid 
-                        alignSelf='center' 
-                        margin='auto' 
-                        display='flex' 
-                        flexDirection='column' 
-                        justifyContent='center' 
-                        alignItems='center'
-                        color={theme.palette.text.secondary}
-                      >
-                        <ErrorIcon sx={{fontSize: '128px'}}/>
-                        <p>There's no product here</p>
-                      </Grid>
+                      <EmptyItem description='There are no products here'/>
                   ) : productsShowcase.map((product) => 
                         <Grid key={product.id} size={{lg: 3, md: 6, xs: 12}}>
                           <ProductCard product={product}/>
