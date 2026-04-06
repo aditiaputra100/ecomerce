@@ -28,9 +28,6 @@ class ApiResponse(BaseModel, Generic[T]):
     )
 
 
-import json
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.inspection import inspect
 from datetime import datetime, date
 
 
@@ -54,36 +51,6 @@ def _serialize_data(obj, visited=None, _exclude_relationships=None):
         return {k: _serialize_data(v, visited, _exclude_relationships) for k, v in obj.items()}
     elif isinstance(obj, (list, tuple)):
         return [_serialize_data(item, visited, _exclude_relationships) for item in obj]
-    elif isinstance(obj, DeclarativeBase):
-        visited.add(obj_id)
-        result = {}
-        mapper = inspect(obj.__class__)
-        
-        # Serialize all columns
-        for column in mapper.columns:
-            result[column.name] = _serialize_data(getattr(obj, column.name), visited, _exclude_relationships)
-        
-        # Serialize relationships - exclude certain ones to prevent infinite recursion
-        for relationship in mapper.relationships:
-            # Skip relationships like "orders" on User, "items" on Order if coming from those models
-            rel_name = f"{obj.__class__.__name__}.{relationship.key}"
-            if rel_name in _exclude_relationships:
-                continue
-                
-            related_value = getattr(obj, relationship.key, None)
-            if related_value is not None:
-                # Add inverse relationships to exclusion for the recursive call
-                new_exclude = _exclude_relationships.copy()
-                # When serializing User's orders, don't serialize Order's owner back to User
-                # When serializing Order's items, don't serialize OrderItem's order back to Order
-                inverse_model = relationship.mapper.class_.__name__
-                new_exclude.add(f"{inverse_model}.owner")
-                new_exclude.add(f"{inverse_model}.orders")
-                new_exclude.add(f"{inverse_model}.order")
-                
-                result[relationship.key] = _serialize_data(related_value, visited, new_exclude)
-        
-        return result
     elif hasattr(obj, 'model_dump'):
         return _serialize_data(obj.model_dump(), visited, _exclude_relationships)
     elif hasattr(obj, '__dict__'):

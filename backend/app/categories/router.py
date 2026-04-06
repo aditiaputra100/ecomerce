@@ -1,11 +1,11 @@
-from typing import Annotated, List
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Security, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.user.dependencies import get_current_user
 from app.user.models import User
-from app.schemas import success_response, error_response
+from app.schemas import success_response
 from . import schemas, service
 
 router = APIRouter(prefix="/categories", tags=["Categories"])

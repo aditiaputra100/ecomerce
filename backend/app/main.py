@@ -15,7 +15,7 @@ from app.shops.router import router as shop_router
 from app.payments.router import router as payment_router
 from app.categories.router import router as category_router
 from app.campaign.router import router as campaign_router
-from app.schemas import error_response
+from app.schemas import error_response, ApiResponse
 from . import exceptions
 import os
 
@@ -72,7 +72,6 @@ app.include_router(campaign_router)
 
 @app.get("/")
 def read_root():
-    from app.schemas import ApiResponse
     return ApiResponse(
         success=True,
         message="Welcome to E-Commerce API (Modular Architecture)",

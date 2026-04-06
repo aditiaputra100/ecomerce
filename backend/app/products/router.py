@@ -9,7 +9,7 @@ from fastapi import (
     status,
 )
 from sqlalchemy.orm import Session
-from typing import List, Optional, Annotated
+from typing import Optional, Annotated
 from app.database import get_db
 from app.exceptions import NotFoundError, FileMaximumError
 from app.user.dependencies import get_current_user

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.orm import Session
-from typing import List, Annotated
+from typing import Annotated
 from app.database import get_db
 from app.user.dependencies import get_current_user
 from app.user.models import User
-from app.schemas import success_response, error_response
+from app.schemas import success_response
 from . import schemas, service
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
