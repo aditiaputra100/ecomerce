@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from . import models
 from ..exceptions import NotFoundError, DuplicateEntryError
 
-def __validation_flash_sale(db: Session, name: str, start_time: datetime, end_time: datetime, exclude_id: int = None):
+def __validation_campaign(db: Session, name: str, start_time: datetime, end_time: datetime, exclude_id: int = None):
     if name.strip() == "":
         raise ValueError("Name cannot be empty")
     
@@ -16,48 +16,48 @@ def __validation_flash_sale(db: Session, name: str, start_time: datetime, end_ti
         raise ValueError("End time cannot be earlier or equal than start time")
     
     try:
-        query = (db.query(models.FlashSale)
-                 .filter(models.FlashSale.start_time < end_time)
-                 .filter(models.FlashSale.end_time > start_time))
+        query = (db.query(models.Campaign)
+                 .filter(models.Campaign.start_time < end_time)
+                 .filter(models.Campaign.end_time > start_time))
         if exclude_id is not None:
-            query = query.filter(models.FlashSale.id != exclude_id)
+            query = query.filter(models.Campaign.id != exclude_id)
         overlapping = query.first()
     except DatabaseError as err:
         db.rollback()
-        raise RuntimeError(f"Failed to check overlapping flash sales: {err}")
+        raise RuntimeError(f"Failed to check overlapping campaigns: {err}")
 
     if overlapping:
         raise ValueError(
-            f"Flash sale '{name}' overlaps with existing flash sale '{overlapping.name}' "
+            f"Campaign '{name}' overlaps with existing campaign '{overlapping.name}' "
             f"({overlapping.start_time} - {overlapping.end_time})"
         )
 
-def get_active_flash_sale(db: Session):
+def get_active_campaign(db: Session):
     now = datetime.now()
 
     try:
-        flash_sale = (db.query(models.FlashSale)
-                      .filter(models.FlashSale.start_time <= now)
-                      .filter(models.FlashSale.end_time >= now)
-                      .first())
+        campaigns = (db.query(models.Campaign)
+                      .filter(models.Campaign.start_time <= now)
+                      .filter(models.Campaign.end_time >= now)
+                      .all())
     except DatabaseError as err:
         db.rollback()
-        raise RuntimeError(f"Failed to fetch active flash sale: {err}")
+        raise RuntimeError(f"Failed to fetch active campaign: {err}")
 
-    if not flash_sale:
-        raise NotFoundError(name="No active flash sale found")
+    return campaigns
 
-    return flash_sale
-
-def create_flash_sale(db: Session, name: str, end_time: datetime, start_time: datetime = datetime.now(timezone.utc), is_active: bool = True) -> None:
-    __validation_flash_sale(
+def create_campaign(db: Session, name: str, end_time: datetime, start_time: datetime = None, is_active: bool = True) -> models.Campaign:
+    if start_time is None:
+        start_time = datetime.now(timezone.utc)
+    
+    __validation_campaign(
         db=db,
         name=name,
         start_time=start_time,
         end_time=end_time
     )
 
-    flash_sale = models.FlashSale(
+    campaign = models.Campaign(
         name=name,
         start_time=start_time,
         end_time=end_time,
@@ -65,72 +65,84 @@ def create_flash_sale(db: Session, name: str, end_time: datetime, start_time: da
     )
 
     try:
-        db.add(flash_sale)
+        db.add(campaign)
         db.commit()
+        db.refresh(campaign)
     except IntegrityError as err:
         db.rollback()
         raise DuplicateEntryError(name=err.orig.args)
     except DatabaseError as err:
         db.rollback()
-        raise RuntimeError(f"Failed to create flash sale: {err}")
+        raise RuntimeError(f"Failed to create campaign: {err}")
     
-def update_flash_sale(db: Session, id: int, name: str, end_time: datetime, start_time: datetime = datetime.now(timezone.utc), is_active: bool = True) -> None:
-    updated_flash_sale = db.get(models.FlashSale, id)
+    return campaign
 
-    if not updated_flash_sale:
-        raise NotFoundError(name="No active flash sale found")
+def update_campaign(db: Session, id: int, name: str, end_time: datetime, start_time: datetime = None, is_active: bool = True) -> models.Campaign:
+    if start_time is None:
+        start_time = datetime.now(timezone.utc)
     
-    __validation_flash_sale(
+    updated_campaign = db.get(models.Campaign, id)
+
+    if not updated_campaign:
+        raise NotFoundError(name="Campaign not found")
+    
+    __validation_campaign(
         db=db,
         name=name,
         start_time=start_time,
         end_time=end_time,
-        exclude_id=updated_flash_sale.id
+        exclude_id=updated_campaign.id
     )
 
-    updated_flash_sale.name = name
-    updated_flash_sale.start_time = start_time
-    updated_flash_sale.end_time = end_time
-    updated_flash_sale.is_active = is_active
+    updated_campaign.name = name
+    updated_campaign.start_time = start_time
+    updated_campaign.end_time = end_time
+    updated_campaign.is_active = is_active
 
     try:
         db.commit()
+        db.refresh(updated_campaign)
     except IntegrityError as err:
         db.rollback()
         raise DuplicateEntryError(name=err.orig.args)
     except DatabaseError as err:
         db.rollback()
-        raise RuntimeError(f"Failed to update flash sale: {err}")
+        raise RuntimeError(f"Failed to update campaign: {err}")
     
-def change_active_flash_sale(db: Session, id: int) -> None:
-    updated_flash_sale = db.get(models.FlashSale, id)
+    return updated_campaign
 
-    if not updated_flash_sale:
-        raise NotFoundError(name="No active flash sale found")
+def change_active_campaign(db: Session, id: int) -> models.Campaign:
+    updated_campaign = db.get(models.Campaign, id)
+
+    if not updated_campaign:
+        raise NotFoundError(name="Campaign not found")
     
-    updated_flash_sale.is_active = not updated_flash_sale.is_active
+    updated_campaign.is_active = not updated_campaign.is_active
 
     try:
+        db.commit()
+        db.refresh(updated_campaign)
+    except IntegrityError as err:
+        db.rollback()
+        raise DuplicateEntryError(name=err.orig.args)
+    except DatabaseError as err:
+        db.rollback()
+        raise RuntimeError(f"Failed to change active campaign: {err}")
+    
+    return updated_campaign
+
+def delete_campaign(db: Session, id: int) -> None:
+    deleted_campaign = db.get(models.Campaign, id)
+
+    if not deleted_campaign:
+        raise NotFoundError(name="Campaign not found")
+
+    try:
+        db.delete(deleted_campaign)
         db.commit()
     except IntegrityError as err:
         db.rollback()
         raise DuplicateEntryError(name=err.orig.args)
     except DatabaseError as err:
         db.rollback()
-        raise RuntimeError(f"Failed to change active flash sale: {err}")
-
-def delete_flash_sale(db: Session, id: int) -> None:
-    deleted_flash_sale = db.get(models.FlashSale, id)
-
-    if not deleted_flash_sale:
-        raise NotFoundError(name="No active flash sale found")
-
-    try:
-        db.delete(deleted_flash_sale)
-        db.commit()
-    except IntegrityError as err:
-        db.rollback()
-        raise DuplicateEntryError(name=err.orig.args)
-    except DatabaseError as err:
-        db.rollback()
-        raise RuntimeError(f"Failed to change active flash sale: {err}")
+        raise RuntimeError(f"Failed to delete campaign: {err}")

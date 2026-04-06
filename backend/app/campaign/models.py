@@ -4,8 +4,8 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
 
-class FlashSale(TimeStampMixin, Base):
-    __tablename__ = "flash_sales"
+class Campaign(TimeStampMixin, Base):
+    __tablename__ = "campaigns"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
     name: Mapped[str] = mapped_column(nullable=False)
@@ -13,18 +13,18 @@ class FlashSale(TimeStampMixin, Base):
     end_time: Mapped[datetime] = mapped_column(nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True)
 
-    items = relationship('FlashSaleItems', back_populates='flash_sale')
+    items = relationship('CampaignItem', back_populates='campaign')
 
 
-class FlashSaleItems(TimeStampMixin, Base):
-    __tablename__ = "flash_sale_items"
+class CampaignItem(TimeStampMixin, Base):
+    __tablename__ = "campaign_items"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
-    flash_sale_id: Mapped[int] = mapped_column(ForeignKey('flash_sales.id'))
+    campaign_id: Mapped[int] = mapped_column(ForeignKey('campaigns.id'))
     product_id: Mapped[int] = mapped_column(ForeignKey('products.id'))
     special_price: Mapped[float] = mapped_column(nullable=False)
     stock_limit: Mapped[int] = mapped_column(nullable=False)
     stock_sold: Mapped[int] = mapped_column(default=0)
 
-    flash_sale = relationship('FlashSale', back_populates='items')
+    campaign = relationship('Campaign', back_populates='items')
     products = relationship('Product')
