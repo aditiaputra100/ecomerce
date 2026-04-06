@@ -1,7 +1,4 @@
 import { alpha, Button, Container, Grid, Skeleton, Stack, Typography, useTheme, Alert } from "@mui/material"
-import {
-  Error as ErrorIcon
-} from '@mui/icons-material'
 import Category from "./Category"
 import { useCategory } from "../store/category"
 import EmptyItem from "./EmptyItem"
@@ -10,7 +7,7 @@ function CategoryList() {
     const categories = useCategory((s) => s.categories)
     const isLoading = useCategory((s) => s.isLoading)
     const error = useCategory((s) => s.error)
-    const isCategoriesEmpty = categories.length == 0
+    const isCategoriesEmpty = categories.length === 0
 
     const theme = useTheme()
 
@@ -26,7 +23,7 @@ function CategoryList() {
           <Grid container spacing={2} marginTop={2}>
             {error && (
               <Grid size={{ xs: 12 }}>
-                <Alert severity="error" icon={<ErrorIcon />}>
+                <Alert severity="error">
                   {error}
                 </Alert>
               </Grid>
@@ -39,7 +36,7 @@ function CategoryList() {
               ))
             )}
             {
-             isCategoriesEmpty && !isLoading && (
+             isCategoriesEmpty && !isLoading && !error && (
                 <EmptyItem description="There are no categories here" />
               )
             }

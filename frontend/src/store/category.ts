@@ -7,7 +7,6 @@ interface CategoryState {
     isLoading: boolean
     error: string | null
     hasFetched: boolean
-    fetchPromise: Promise<void> | null
     fetchCategories: (options?: { force?: boolean }) => Promise<void>
 }
 
@@ -20,13 +19,12 @@ export const useCategory = create<CategoryState>((set, get) => ({
     isLoading: false,
     error: null,
     hasFetched: false,
-    fetchPromise: null,
     fetchCategories: async (options?: { force?: boolean }) => {
         const state = get()
         const { force = false } = options || {}
 
-        // Return existing promise if fetch is already in-flight
-        if (fetchPromiseRef) {
+        // If force refresh requested, proceed; otherwise check in-flight status
+        if (!force && fetchPromiseRef) {
             return fetchPromiseRef
         }
 
@@ -54,7 +52,6 @@ export const useCategory = create<CategoryState>((set, get) => ({
         })()
 
         fetchPromiseRef = fetchPromise
-        set({ fetchPromise })
 
         return fetchPromise
     }

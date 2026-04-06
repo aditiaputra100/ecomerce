@@ -12,7 +12,6 @@ import {
   useTheme,
 } from '@mui/material'
 import {
-  Error as ErrorIcon, 
   OfflineBolt as OfflineBoltIcon,
   ArrowRight as ArrowRightIcon,
   ArrowLeft as ArrowLeftIcon
