@@ -1,98 +1,412 @@
 import pytest
+import io
+from unittest.mock import patch
 
-def test_complete_checkout_flow(client):
-    # 1. Setup Admin & Produk (Domain Auth & Products)
-    # Register needs username and password >= 8 chars
-    client.post("/register", json={"username": "admin", "email": "admin@test.com", "password": "password123", "disable": False})
-    
-    # Login needs scope="shopowner" to create products
-    login = client.post("/token", data={"username": "admin", "password": "password123"})
-    assert login.status_code == 200, login.text
+
+# ── Mock image I/O untuk semua test ──
+
+@pytest.fixture(autouse=True)
+def mock_image_ops():
+    with patch("app.products.service.save_image", return_value="/static/uploads/products/test.jpg"):
+        with patch("app.products.service.delete_image", return_value=True):
+            yield
+
+
+# === Helpers ===
+
+def _auth(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _setup_shopowner(client, username="seller", email="seller@test.com"):
+    """Register → login → create shop → re-login untuk dapat scope shopowner."""
+    client.post("/register", json={
+        "username": username, "email": email,
+        "password": "password123", "disable": False,
+    })
+    login = client.post("/token", data={"username": username, "password": "password123"})
     token = login.json()["access_token"]
 
-    shop_resp = client.post(
-        "/shops/",
-        headers={"Authorization": f"Bearer {token}"},
-        data={"name": "Admin Shop", "description": "Admin official store"}
+    client.post("/shops/", headers=_auth(token), data={
+        "name": f"{username} Shop", "description": "Test shop",
+    })
+
+    login = client.post("/token", data={"username": username, "password": "password123"})
+    return login.json()["access_token"]
+
+
+def _setup_customer(client, username="buyer", email="buyer@test.com"):
+    """Register → login → return token customer."""
+    client.post("/register", json={
+        "username": username, "email": email,
+        "password": "password123", "disable": False,
+    })
+    login = client.post("/token", data={"username": username, "password": "password123"})
+    return login.json()["access_token"]
+
+
+def _create_category(client, token, name="Test Category"):
+    """Create a product category."""
+    resp = client.post("/categories/", headers=_auth(token), json={"name": name})
+    assert resp.status_code == 201, resp.text
+    return resp.json()["id"]
+
+
+def _create_product(client, token, name="Test Product", price=100.0, stock=10):
+    """Create a product with image mocked."""
+    cat_id = _create_category(client, token, name=f"{name} Category")
+    return client.post(
+        "/products/",
+        headers=_auth(token),
+        data={
+            "name": name, "description": "Test description",
+            "price": price, "stock": stock, "is_publish": True, "category_id": cat_id,
+        },
+        files={"image": ("test.jpg", io.BytesIO(b"\xff\xd8\xff\xe0"), "image/jpeg")},
     )
-    assert shop_resp.status_code == 201, shop_resp.text
-
-    login = client.post("/token", data={"username": "admin", "password": "password123"})
-    assert login.status_code == 200, login.text
-    token = login.json()["access_token"]
-    
-    # Create Product (needs image URL or similar? Service allows None, Router might require it? Router has image: UploadFile = File(None))
-    # Router uses Form(...) for fields.
-    prod_resp = client.post("/products/", headers={"Authorization": f"Bearer {token}"}, data={
-        "name": "Mechanical Keyboard", 
-        "description": "RGB", 
-        "price": 100.0, 
-        "stock": 5,
-        "is_publish": True
-    })
-    assert prod_resp.status_code == 200, prod_resp.text
-    product_id = prod_resp.json()["id"]
-
-    # 2. Setup Customer & Order (Domain Auth & Orders)
-    client.post("/register", json={"username": "buyer", "email": "buyer@test.com", "password": "password123", "disable": False})
-    login_cust = client.post("/token", data={"username": "buyer", "password": "password123"})
-    assert login_cust.status_code == 200, login_cust.text
-    cust_token = login_cust.json()["access_token"]
-    
-    # Place Order
-    order_resp = client.post("/orders/", headers={"Authorization": f"Bearer {cust_token}"}, json={
-        "items": [{"product_id": product_id, "quantity": 3}]
-    })
-    
-    assert order_resp.status_code == 200, order_resp.text
-    assert order_resp.json()["total_price"] == 300.0
-
-    # 3. Verify Product Stock Deduction (Domain Products)
-    prod_list = client.get("/products/")
-    product = next(p for p in prod_list.json() if p["id"] == product_id)
-    assert product["stock"] == 2 # 5 - 3 = 2
 
 
-def test_duplicate_order_rejected(client):
-    client.post("/register", json={"username": "sellerdup", "email": "sellerdup@test.com", "password": "password123", "disable": False})
+# === Test Classes ===
 
-    seller_login = client.post("/token", data={"username": "sellerdup", "password": "password123"})
-    assert seller_login.status_code == 200
-    seller_token = seller_login.json()["access_token"]
+class TestCreateOrder:
+    """Test pembuatan order."""
 
-    shop_resp = client.post(
-        "/shops/",
-        headers={"Authorization": f"Bearer {seller_token}"},
-        data={"name": "Seller Dup Shop", "description": "Shop for duplicate test"}
-    )
-    assert shop_resp.status_code == 201, shop_resp.text
+    def test_create_order_success(self, client):
+        # Setup seller & product
+        seller_token = _setup_shopowner(client, username="seller1", email="seller1@test.com")
+        prod_resp = _create_product(client, seller_token, name="Keyboard", price=100.0, stock=5)
+        assert prod_resp.status_code == 201, prod_resp.text
+        product_id = prod_resp.json()["data"]["id"]
 
-    seller_login = client.post("/token", data={"username": "sellerdup", "password": "password123"})
-    assert seller_login.status_code == 200
-    seller_token = seller_login.json()["access_token"]
+        # Setup buyer
+        buyer_token = _setup_customer(client, username="buyer1", email="buyer1@test.com")
 
-    prod_resp = client.post("/products/", headers={"Authorization": f"Bearer {seller_token}"}, data={
-        "name": "Unique Keyboard",
-        "description": "RGB",
-        "price": 150.0,
-        "stock": 10,
-        "is_publish": True
-    })
-    assert prod_resp.status_code == 200, prod_resp.text
-    product_id = prod_resp.json()["id"]
+        # Create order
+        order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 3}]
+        })
+        assert order_resp.status_code == 200, order_resp.text
+        order = order_resp.json()
+        assert order["total_price"] == 300.0
+        assert order["status"] == "pending"
 
-    client.post("/register", json={"username": "buyerdup", "email": "buyerdup@test.com", "password": "password123", "disable": False})
-    buyer_login = client.post("/token", data={"username": "buyerdup", "password": "password123"})
-    assert buyer_login.status_code == 200
-    buyer_token = buyer_login.json()["access_token"]
+    def test_create_order_product_not_found(self, client):
+        buyer_token = _setup_customer(client, username="buyer2", email="buyer2@test.com")
 
-    first_order = client.post("/orders/", headers={"Authorization": f"Bearer {buyer_token}"}, json={
-        "items": [{"product_id": product_id, "quantity": 2}]
-    })
-    assert first_order.status_code == 200, first_order.text
+        order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": 9999, "quantity": 1}]
+        })
+        assert order_resp.status_code == 400
+        assert "not found" in order_resp.json()["detail"].lower()
 
-    dup_order = client.post("/orders/", headers={"Authorization": f"Bearer {buyer_token}"}, json={
-        "items": [{"product_id": product_id, "quantity": 2}]
-    })
-    assert dup_order.status_code == 400
-    assert dup_order.json()["detail"] == "You already placed this order. Complete or cancel the previous one before retrying."
+    def test_create_order_insufficient_stock(self, client):
+        # Setup seller & product
+        seller_token = _setup_shopowner(client, username="seller2", email="seller2@test.com")
+        prod_resp = _create_product(client, seller_token, name="Mouse", price=50.0, stock=2)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        # Setup buyer
+        buyer_token = _setup_customer(client, username="buyer3", email="buyer3@test.com")
+
+        # Try to order more than available
+        order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 5}]
+        })
+        assert order_resp.status_code == 400
+        assert "insufficient stock" in order_resp.json()["detail"].lower()
+
+    def test_prevent_self_purchase(self, client):
+        seller_token = _setup_shopowner(client, username="seller3", email="seller3@test.com")
+        prod_resp = _create_product(client, seller_token, name="Monitor", price=200.0, stock=10)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        # Seller tries to buy own product
+        order_resp = client.post("/orders/", headers=_auth(seller_token), json={
+            "items": [{"product_id": product_id, "quantity": 1}]
+        })
+        assert order_resp.status_code == 400
+        assert "cannot buy your own product" in order_resp.json()["detail"].lower()
+
+    def test_allow_duplicate_orders(self, client):
+        """After removal of duplicate check, user can order same products multiple times."""
+        seller_token = _setup_shopowner(client, username="seller4", email="seller4@test.com")
+        prod_resp = _create_product(client, seller_token, name="Headset", price=80.0, stock=20)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        buyer_token = _setup_customer(client, username="buyer4", email="buyer4@test.com")
+
+        # First order
+        order1 = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 2}]
+        })
+        assert order1.status_code == 200
+
+        # Second order (same product, should succeed now)
+        order2 = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 2}]
+        })
+        assert order2.status_code == 200, order2.text
+
+
+class TestCancelOrder:
+    """Test pembatalan order."""
+
+    def test_cancel_pending_order(self, client):
+        # Setup seller & product
+        seller_token = _setup_shopowner(client, username="seller5", email="seller5@test.com")
+        prod_resp = _create_product(client, seller_token, name="Keyboard", price=100.0, stock=10)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        # Setup buyer
+        buyer_token = _setup_customer(client, username="buyer5", email="buyer5@test.com")
+
+        # Create order
+        order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 3}]
+        })
+        assert order_resp.status_code == 200
+        order_id = order_resp.json()["id"]
+
+        # Cancel order
+        cancel_resp = client.delete(f"/orders/{order_id}", headers=_auth(buyer_token))
+        assert cancel_resp.status_code == 200
+        assert "Success delete order" in cancel_resp.json()["message"]
+
+        # Verify order status is deleted
+        orders_resp = client.get("/orders/", headers=_auth(buyer_token))
+        orders = orders_resp.json()
+        order = next(o for o in orders if o["id"] == order_id)
+        assert order["status"] == "deleted"
+
+        # Verify stock is restored
+        prod_list = client.get("/products/")
+        product = next(p for p in prod_list.json() if p["id"] == product_id)
+        assert product["stock"] == 10  # 10 - 3 + 3 = 10
+
+    def test_cancel_non_pending_order(self, client):
+        # Setup seller & product
+        seller_token = _setup_shopowner(client, username="seller6", email="seller6@test.com")
+        prod_resp = _create_product(client, seller_token, name="Mouse", price=50.0, stock=10)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        # Setup buyer
+        buyer_token = _setup_customer(client, username="buyer6", email="buyer6@test.com")
+
+        # Create order
+        order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 2}]
+        })
+        assert order_resp.status_code == 200
+        order_id = order_resp.json()["id"]
+
+        # Change status to processing
+        status_resp = client.patch(
+            f"/orders/{order_id}/status",
+            headers=_auth(seller_token),
+            json={"status": "processing"}
+        )
+        assert status_resp.status_code == 200
+
+        # Try to cancel non-pending order
+        cancel_resp = client.delete(f"/orders/{order_id}", headers=_auth(buyer_token))
+        assert cancel_resp.status_code == 400
+        assert "only pending" in cancel_resp.json()["detail"].lower()
+
+    def test_cancel_order_not_found(self, client):
+        buyer_token = _setup_customer(client, username="buyer7", email="buyer7@test.com")
+
+        cancel_resp = client.delete(f"/orders/9999", headers=_auth(buyer_token))
+        assert cancel_resp.status_code == 400
+        assert "not found" in cancel_resp.json()["detail"].lower()
+
+    def test_cancel_other_user_order(self, client):
+        # Setup seller & product
+        seller_token = _setup_shopowner(client, username="seller7", email="seller7@test.com")
+        prod_resp = _create_product(client, seller_token, name="Monitor", price=200.0, stock=10)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        # Setup buyer A
+        buyer_a_token = _setup_customer(client, username="buyerA", email="buyerA@test.com")
+
+        # Setup buyer B
+        buyer_b_token = _setup_customer(client, username="buyerB", email="buyerB@test.com")
+
+        # Buyer A creates order
+        order_resp = client.post("/orders/", headers=_auth(buyer_a_token), json={
+            "items": [{"product_id": product_id, "quantity": 1}]
+        })
+        assert order_resp.status_code == 200
+        order_id = order_resp.json()["id"]
+
+        # Buyer B tries to cancel buyer A's order
+        cancel_resp = client.delete(f"/orders/{order_id}", headers=_auth(buyer_b_token))
+        assert cancel_resp.status_code == 403
+        assert "not allowed" in cancel_resp.json()["detail"].lower()
+
+
+class TestListOrders:
+    """Test daftar order."""
+
+    def test_list_user_orders(self, client):
+        seller_token = _setup_shopowner(client, username="seller8", email="seller8@test.com")
+        prod_resp = _create_product(client, seller_token, name="Keyboard", price=100.0, stock=10)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        buyer_token = _setup_customer(client, username="buyer8", email="buyer8@test.com")
+
+        # Create 2 orders
+        order1 = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 1}]
+        })
+        assert order1.status_code == 200
+
+        order2 = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 2}]
+        })
+        assert order2.status_code == 200
+
+        # List orders
+        list_resp = client.get("/orders/", headers=_auth(buyer_token))
+        assert list_resp.status_code == 200
+        orders = list_resp.json()
+        assert len(orders) == 2
+
+    def test_list_shop_orders(self, client):
+        seller_token = _setup_shopowner(client, username="seller9", email="seller9@test.com")
+        prod_resp = _create_product(client, seller_token, name="Mouse", price=50.0, stock=10)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        buyer_token = _setup_customer(client, username="buyer9", email="buyer9@test.com")
+
+        # Create order
+        order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 2}]
+        })
+        assert order_resp.status_code == 200
+        order_id = order_resp.json()["id"]
+
+        # Seller lists shop orders
+        shop_orders = client.get("/orders/shop", headers=_auth(seller_token))
+        assert shop_orders.status_code == 200
+        orders = shop_orders.json()
+        assert len(orders) == 1
+        assert orders[0]["id"] == order_id
+        assert orders[0]["owner"]["username"] == "buyer9"
+
+
+class TestOrderStatus:
+    """Test perubahan status order."""
+
+    def test_seller_update_status(self, client):
+        seller_token = _setup_shopowner(client, username="seller10", email="seller10@test.com")
+        prod_resp = _create_product(client, seller_token, name="Keyboard", price=100.0, stock=10)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        buyer_token = _setup_customer(client, username="buyer10", email="buyer10@test.com")
+
+        # Create order
+        order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 1}]
+        })
+        assert order_resp.status_code == 200
+        order_id = order_resp.json()["id"]
+
+        # Seller updates to processing
+        status_resp = client.patch(
+            f"/orders/{order_id}/status",
+            headers=_auth(seller_token),
+            json={"status": "processing"}
+        )
+        assert status_resp.status_code == 200
+        assert status_resp.json()["status"] == "processing"
+
+        # Seller updates to shipped
+        status_resp = client.patch(
+            f"/orders/{order_id}/status",
+            headers=_auth(seller_token),
+            json={"status": "shipped"}
+        )
+        assert status_resp.status_code == 200
+        assert status_resp.json()["status"] == "shipped"
+
+    def test_buyer_complete_order(self, client):
+        seller_token = _setup_shopowner(client, username="seller11", email="seller11@test.com")
+        prod_resp = _create_product(client, seller_token, name="Mouse", price=50.0, stock=10)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        buyer_token = _setup_customer(client, username="buyer11", email="buyer11@test.com")
+
+        # Create order
+        order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 1}]
+        })
+        assert order_resp.status_code == 200
+        order_id = order_resp.json()["id"]
+
+        # Seller sets to shipped
+        client.patch(
+            f"/orders/{order_id}/status",
+            headers=_auth(seller_token),
+            json={"status": "processing"}
+        )
+        client.patch(
+            f"/orders/{order_id}/status",
+            headers=_auth(seller_token),
+            json={"status": "shipped"}
+        )
+
+        # Buyer completes order
+        complete_resp = client.patch(
+            f"/orders/{order_id}/status",
+            headers=_auth(buyer_token),
+            json={"status": "completed"}
+        )
+        assert complete_resp.status_code == 200
+        assert complete_resp.json()["status"] == "completed"
+
+    def test_buyer_cannot_set_shipped(self, client):
+        seller_token = _setup_shopowner(client, username="seller12", email="seller12@test.com")
+        prod_resp = _create_product(client, seller_token, name="Monitor", price=200.0, stock=10)
+        assert prod_resp.status_code == 201
+        product_id = prod_resp.json()["data"]["id"]
+
+        buyer_token = _setup_customer(client, username="buyer12", email="buyer12@test.com")
+
+        # Create order
+        order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
+            "items": [{"product_id": product_id, "quantity": 1}]
+        })
+        assert order_resp.status_code == 200
+        order_id = order_resp.json()["id"]
+
+        # Buyer tries to set to shipped (should fail)
+        fail_resp = client.patch(
+            f"/orders/{order_id}/status",
+            headers=_auth(buyer_token),
+            json={"status": "shipped"}
+        )
+        assert fail_resp.status_code == 403
+
+
+class TestOrderAuthorization:
+    """Test otentikasi & otorisasi."""
+
+    def test_create_order_without_token(self, client):
+        order_resp = client.post("/orders/", json={
+            "items": [{"product_id": 1, "quantity": 1}]
+        })
+        assert order_resp.status_code == 401
+
+    def test_list_orders_without_token(self, client):
+        list_resp = client.get("/orders/")
+        assert list_resp.status_code == 401
