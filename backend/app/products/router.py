@@ -14,7 +14,7 @@ from app.database import get_db
 from app.exceptions import NotFoundError, FileMaximumError
 from app.user.dependencies import get_current_user
 from app.user.models import User
-from app.schemas import CreatedResponse, Product
+from app.schemas import success_response, Product
 from app.categories.models import Category
 from . import schemas, service
 
@@ -36,23 +36,23 @@ def _validate_category(db: Session, category_id: Optional[int]):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found or inactive")
     return category
 
-@router.get("/", response_model=List[Product])
+@router.get("/")
 def list_products(category: Optional[str] = None, username: str | None = None, db: Session = Depends(get_db)):
     products = service.get_products(db, username=username)
-
-    return products
+    return success_response(data=products, message="Products retrieved successfully")
 
 @router.get("/homepage", response_model=schemas.ProductHomePage)
 async def products_homepage():
     pass
 
-@router.get("/me", response_model=List[schemas.ProductOwner])
+@router.get("/me")
 def get_my_products(
     current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
     db: Session = Depends(get_db)
 ):
     _ensure_shop_owner(current_user)
-    return service.get_products_by_user_id(db, current_user.id)
+    products = service.get_products_by_user_id(db, current_user.id)
+    return success_response(data=products, message="Your products retrieved successfully")
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_product(
@@ -110,11 +110,10 @@ async def create_product(
             detail="Unexpected error occured"
         )
     
-    return CreatedResponse(
-        data=Product.model_validate(response_data)
-    )
+    product = Product.model_validate(response_data)
+    return success_response(data=product, message="Product created successfully", status_code=201)
 
-@router.put("/{product_id}", response_model=Product)
+@router.put("/{product_id}")
 async def update_product(
     product_id: int,
     current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
@@ -157,7 +156,8 @@ async def update_product(
         "category_id": category_id,
     }
 
-    return service.update_product(db, product_id, product_data, image_url)
+    updated_product = service.update_product(db, product_id, product_data, image_url)
+    return success_response(data=updated_product, message="Product updated successfully")
 
 @router.delete("/{product_id}")
 def delete_product(
@@ -179,16 +179,16 @@ def delete_product(
     if not success:
          raise HTTPException(status_code=500, detail="Failed to delete product")
     
-    return {"detail": "Product deleted"}
+    return success_response(data=None, message="Product deleted successfully")
 
-@router.get("/{product_id}", response_model=Product)
+@router.get("/{product_id}")
 def get_product(product_id: int, db: Annotated[Session, Depends(get_db)]):
     product = service.get_product_by_id(db, product_id)
 
     if not product:
         raise NotFoundError(name=f"Product with an ID {product_id} is not found")
     
-    return product
+    return success_response(data=product, message="Product retrieved successfully")
 
 @router.patch("/{product_id}/publish")
 def publish_product(
@@ -208,6 +208,5 @@ def publish_product(
 
     db.commit()
 
-    return {
-        "detail": f"Product {'published' if product.is_publish else 'not published'}"
-    }
+    message = f"Product {'published' if product.is_publish else 'not published'}"
+    return success_response(data=product, message=message)

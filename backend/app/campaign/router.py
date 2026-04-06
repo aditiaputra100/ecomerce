@@ -1,18 +1,18 @@
 from typing import Annotated, List
-from fastapi import APIRouter, Depends, Security, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Security, status, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.user.dependencies import get_current_user
 from app.user.models import User
+from app.schemas import success_response
 from app.exceptions import NotFoundError
 from . import schemas, service
 
 router = APIRouter(prefix="/campaign", tags=["Campaign"])
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/")
 def create_campaign(
     payload: schemas.CampaignCreate,
     current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
@@ -26,32 +26,27 @@ def create_campaign(
             end_time=payload.end_time,
             is_active=payload.is_active,
         )
-        return {
-            "message": "Campaign created successfully",
-            "data": schemas.CampaignResponse.model_validate(campaign).model_dump(),
-        }
-    except ValueError as err:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"message": str(err)},
+        campaign_data = schemas.CampaignResponse.model_validate(campaign).model_dump()
+        return success_response(
+            data=campaign_data,
+            message="Campaign created successfully",
+            status_code=201
         )
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err))
 
 
 @router.get("/active")
 def get_active_campaigns(db: Session = Depends(get_db)):
     try:
         campaigns = service.get_active_campaign(db)
-        return {
-            "data": [
-                schemas.CampaignResponse.model_validate(c).model_dump()
-                for c in campaigns
-            ],
-        }
+        campaigns_data = [
+            schemas.CampaignResponse.model_validate(c).model_dump()
+            for c in campaigns
+        ]
+        return success_response(data=campaigns_data)
     except RuntimeError as err:
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"message": str(err)},
-        )
+        raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.put("/{campaign_id}")
@@ -70,20 +65,15 @@ def update_campaign(
             end_time=payload.end_time,
             is_active=payload.is_active,
         )
-        return {
-            "message": "Campaign updated successfully",
-            "data": schemas.CampaignResponse.model_validate(campaign).model_dump(),
-        }
+        campaign_data = schemas.CampaignResponse.model_validate(campaign).model_dump()
+        return success_response(
+            data=campaign_data,
+            message="Campaign updated successfully"
+        )
     except ValueError as err:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"message": str(err)},
-        )
+        raise HTTPException(status_code=400, detail=str(err))
     except NotFoundError as err:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": str(err.name)},
-        )
+        raise HTTPException(status_code=404, detail=str(err.name))
 
 
 @router.patch("/{campaign_id}/active")
@@ -95,15 +85,13 @@ def toggle_campaign_active(
     try:
         campaign = service.change_active_campaign(db, id=campaign_id)
         action = "activated" if campaign.is_active else "deactivated"
-        return {
-            "message": f"Campaign {action} successfully",
-            "data": schemas.CampaignResponse.model_validate(campaign).model_dump(),
-        }
-    except NotFoundError as err:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": str(err.name)},
+        campaign_data = schemas.CampaignResponse.model_validate(campaign).model_dump()
+        return success_response(
+            data=campaign_data,
+            message=f"Campaign {action} successfully"
         )
+    except NotFoundError as err:
+        raise HTTPException(status_code=404, detail=str(err.name))
 
 
 @router.delete("/{campaign_id}")
@@ -114,17 +102,11 @@ def delete_campaign(
 ):
     try:
         service.delete_campaign(db, id=campaign_id)
-        return {
-            "message": "Campaign deleted successfully",
-            "id": campaign_id,
-        }
+        return success_response(
+            data={"id": campaign_id},
+            message="Campaign deleted successfully"
+        )
     except ValueError as err:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"message": str(err)},
-        )
+        raise HTTPException(status_code=400, detail=str(err))
     except NotFoundError as err:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": str(err.name)},
-        )
+        raise HTTPException(status_code=404, detail=str(err.name))

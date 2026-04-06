@@ -13,14 +13,14 @@ def _setup_shopowner(client, username="seller", email="seller@test.com"):
         "password": "password123", "disable": False,
     })
     login = client.post("/token", data={"username": username, "password": "password123"})
-    token = login.json()["access_token"]
+    token = login.json()["data"]["access_token"]
 
     client.post("/shops/", headers=_auth(token), data={
         "name": f"{username} Shop", "description": "Test shop",
     })
 
     login = client.post("/token", data={"username": username, "password": "password123"})
-    return login.json()["access_token"]
+    return login.json()["data"]["access_token"]
 
 
 def _today():
@@ -57,7 +57,9 @@ class TestCreateCampaign:
         })
 
         assert resp.status_code == 400
-        assert "message" in resp.json()
+        body = resp.json()
+        assert body["success"] is False
+        assert "message" in body
 
     def test_create_start_time_in_past(self, client):
         token = _setup_shopowner(client)
@@ -69,6 +71,7 @@ class TestCreateCampaign:
         })
 
         assert resp.status_code == 400
+        assert resp.json()["success"] is False
 
     def test_create_end_time_before_start(self, client):
         token = _setup_shopowner(client)
@@ -80,6 +83,7 @@ class TestCreateCampaign:
         })
 
         assert resp.status_code == 400
+        assert resp.json()["success"] is False
 
     def test_create_overlapping(self, client):
         token = _setup_shopowner(client)
@@ -102,6 +106,7 @@ class TestCreateCampaign:
             "end_time": (_today() + timedelta(days=3)).isoformat(),
         })
         assert resp2.status_code == 400
+        assert resp2.json()["success"] is False
 
 
 class TestGetActiveCampaign:
@@ -182,6 +187,7 @@ class TestUpdateCampaign:
         })
 
         assert resp.status_code == 400
+        assert resp.json()["success"] is False
 
 
 class TestToggleCampaignActive:
@@ -245,9 +251,10 @@ class TestDeleteCampaign:
         resp = client.delete(f"/campaign/{campaign_id}", headers=headers)
 
         assert resp.status_code == 200
-        data = resp.json()
-        assert data["message"] == "Campaign deleted successfully"
-        assert data["id"] == campaign_id
+        body = resp.json()
+        assert body["success"] is True
+        assert body["message"] == "Campaign deleted successfully"
+        assert body["data"]["id"] == campaign_id
 
     def test_delete_active_campaign_rejected(self, client, db_session):
         """Test menghapus campaign aktif — expect 400"""
@@ -269,7 +276,9 @@ class TestDeleteCampaign:
         resp = client.delete(f"/campaign/{campaign_id}", headers=headers)
 
         assert resp.status_code == 400
-        assert "active campaign" in resp.json()["message"].lower()
+        body = resp.json()
+        assert body["success"] is False
+        assert "active campaign" in body["message"].lower()
 
     def test_delete_campaign_not_found(self, client, db_session):
         """Test menghapus campaign yang tidak ada — expect 404"""
@@ -279,7 +288,9 @@ class TestDeleteCampaign:
         resp = client.delete("/campaign/9999", headers=headers)
 
         assert resp.status_code == 404
-        assert "not found" in resp.json()["message"].lower()
+        body = resp.json()
+        assert body["success"] is False
+        assert "not found" in body["message"].lower()
 
     def test_delete_campaign_verify_removed(self, client, db_session):
         """Test bahwa campaign benar-benar terhapus dari database"""
@@ -307,6 +318,7 @@ class TestDeleteCampaign:
             headers=headers,
         )
         assert update_resp.status_code == 404
+        assert update_resp.json()["success"] is False
 
     def test_delete_campaign_without_token(self, client, db_session):
         """Test menghapus campaign tanpa autentikasi — expect 401"""

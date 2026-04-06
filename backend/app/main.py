@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.database import engine, Base
 from app.config import settings
 from app.shops import models as shop_models  # noqa: F401
@@ -14,6 +15,7 @@ from app.shops.router import router as shop_router
 from app.payments.router import router as payment_router
 from app.categories.router import router as category_router
 from app.campaign.router import router as campaign_router
+from app.schemas import error_response
 from . import exceptions
 import os
 
@@ -47,6 +49,13 @@ app.add_exception_handler(exceptions.DuplicateEntryError, exceptions.duplicate_e
 app.add_exception_handler(exceptions.NotFoundError, exceptions.not_found_handler)
 app.add_exception_handler(exceptions.ResourceDisableError, exceptions.resource_disable_handler)
 
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """Custom HTTPException handler to use ApiResponse format"""
+    return error_response(message=exc.detail, status_code=exc.status_code)
+
+
 # Include Routers
 app.include_router(auth_router)
 app.include_router(user_router)
@@ -59,8 +68,9 @@ app.include_router(campaign_router)
 
 @app.get("/")
 def read_root():
-    return {
-        "message": "Welcome to E-Commerce API (Modular Architecture)",
-        "docs": "/docs",
-        "static_files": "/static"
-    }
+    from app.schemas import ApiResponse
+    return ApiResponse(
+        success=True,
+        message="Welcome to E-Commerce API (Modular Architecture)",
+        data={"docs": "/docs", "static_files": "/static"}
+    ).model_dump()
