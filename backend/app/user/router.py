@@ -21,7 +21,7 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     )
     # Convert to Pydantic schema to avoid exposing sensitive fields
     user_response = schemas.User.model_validate(new_user)
-    return SuccessResponse(message="User created successfully", data=new_user)
+    return SuccessResponse(message="User created successfully", data=user_response)
 
 @auth.post("/token", response_model=SuccessResponse[schemas.Token, None])
 def token(

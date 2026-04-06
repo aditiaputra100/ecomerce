@@ -15,8 +15,8 @@ from app.shops.router import router as shop_router
 from app.payments.router import router as payment_router
 from app.categories.router import router as category_router
 from app.campaign.router import router as campaign_router
-from app.schemas import error_response, ApiResponse, SuccessResponse
-from dataclasses import dataclass
+from app.schemas import SuccessResponse
+from pydantic import BaseModel
 from . import exceptions
 import os
 
@@ -54,7 +54,7 @@ app.add_exception_handler(exceptions.ResourceDisableError, exceptions.resource_d
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     """Custom HTTPException handler to use ApiResponse format"""
-    response = error_response(message=exc.detail, status_code=exc.status_code)
+    response = JSONResponse(message=exc.detail, status_code=exc.status_code)
     # Preserve any custom headers (e.g., WWW-Authenticate for 401)
     if exc.headers:
         response.headers.update(exc.headers)
@@ -72,8 +72,7 @@ app.include_router(category_router)
 app.include_router(campaign_router)
 
 
-@dataclass
-class RootResponse:
+class RootResponse(BaseModel):
     docs: str
     static_files: str
 
