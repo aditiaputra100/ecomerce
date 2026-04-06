@@ -46,7 +46,7 @@ def get_active_campaign(db: Session):
 
     return campaigns
 
-def create_campaign(db: Session, name: str, end_time: datetime, start_time: datetime = None, is_active: bool = True) -> models.Campaign:
+def create_campaign(db: Session, name: str, end_time: datetime, start_time: datetime = None, is_active: bool = False) -> models.Campaign:
     if start_time is None:
         start_time = datetime.now(timezone.utc)
     
@@ -136,6 +136,20 @@ def delete_campaign(db: Session, id: int) -> None:
 
     if not deleted_campaign:
         raise NotFoundError(name="Campaign not found")
+
+    # Validasi 1: Campaign harus dalam status nonaktif
+    if deleted_campaign.is_active:
+        raise ValueError(
+            "Cannot delete an active campaign. "
+            "Please deactivate the campaign first via PATCH /campaign/{id}/active"
+        )
+
+    # Validasi 2: Campaign tidak boleh memiliki produk yang terdaftar
+    if deleted_campaign.items and len(deleted_campaign.items) > 0:
+        raise ValueError(
+            "Cannot delete campaign that has registered products. "
+            "Please remove all products from the campaign first"
+        )
 
     try:
         db.delete(deleted_campaign)

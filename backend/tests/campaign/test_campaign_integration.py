@@ -44,7 +44,7 @@ class TestCreateCampaign:
         body = resp.json()
         assert body["message"] == "Campaign created successfully"
         assert body["data"]["name"] == "Year End Sale"
-        assert body["data"]["is_active"] is True
+        assert body["data"]["is_active"] is False
         assert body["data"]["id"] is not None
 
     def test_create_empty_name(self, client):
@@ -224,6 +224,96 @@ class TestToggleCampaignActive:
         assert resp.status_code == 404
 
 
+class TestDeleteCampaign:
+    """Integration tests for DELETE /campaign/{campaign_id}"""
+
+    def test_delete_inactive_campaign_success(self, client, db_session):
+        """Test menghapus campaign nonaktif tanpa items — expect 200"""
+        token = _setup_shopowner(client)
+        headers = _auth(token)
+
+        # Buat campaign (default is_active=False)
+        payload = {
+            "name": "Campaign To Delete",
+            "end_time": (_today() + timedelta(days=5)).isoformat(),
+        }
+        create_resp = client.post("/campaign/", json=payload, headers=headers)
+        assert create_resp.status_code == 201
+        campaign_id = create_resp.json()["data"]["id"]
+
+        # Hapus campaign (is_active=False, tidak ada items)
+        resp = client.delete(f"/campaign/{campaign_id}", headers=headers)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["message"] == "Campaign deleted successfully"
+        assert data["id"] == campaign_id
+
+    def test_delete_active_campaign_rejected(self, client, db_session):
+        """Test menghapus campaign aktif — expect 400"""
+        token = _setup_shopowner(client)
+        headers = _auth(token)
+
+        # Buat campaign lalu aktifkan
+        payload = {
+            "name": "Active Campaign",
+            "end_time": (_today() + timedelta(days=5)).isoformat(),
+        }
+        create_resp = client.post("/campaign/", json=payload, headers=headers)
+        campaign_id = create_resp.json()["data"]["id"]
+
+        # Aktifkan campaign via toggle
+        client.patch(f"/campaign/{campaign_id}/active", headers=headers)
+
+        # Coba hapus — harus ditolak karena aktif
+        resp = client.delete(f"/campaign/{campaign_id}", headers=headers)
+
+        assert resp.status_code == 400
+        assert "active campaign" in resp.json()["message"].lower()
+
+    def test_delete_campaign_not_found(self, client, db_session):
+        """Test menghapus campaign yang tidak ada — expect 404"""
+        token = _setup_shopowner(client)
+        headers = _auth(token)
+
+        resp = client.delete("/campaign/9999", headers=headers)
+
+        assert resp.status_code == 404
+        assert "not found" in resp.json()["message"].lower()
+
+    def test_delete_campaign_verify_removed(self, client, db_session):
+        """Test bahwa campaign benar-benar terhapus dari database"""
+        token = _setup_shopowner(client)
+        headers = _auth(token)
+
+        # Buat campaign (default nonaktif)
+        payload = {
+            "name": "Verify Removed",
+            "end_time": (_today() + timedelta(days=5)).isoformat(),
+        }
+        create_resp = client.post("/campaign/", json=payload, headers=headers)
+        campaign_id = create_resp.json()["data"]["id"]
+
+        # Hapus
+        client.delete(f"/campaign/{campaign_id}", headers=headers)
+
+        # Coba update campaign yang sudah dihapus — harus 404
+        update_resp = client.put(
+            f"/campaign/{campaign_id}",
+            json={
+                "name": "Updated",
+                "end_time": (_today() + timedelta(days=10)).isoformat(),
+            },
+            headers=headers,
+        )
+        assert update_resp.status_code == 404
+
+    def test_delete_campaign_without_token(self, client, db_session):
+        """Test menghapus campaign tanpa autentikasi — expect 401"""
+        resp = client.delete("/campaign/1")
+        assert resp.status_code == 401
+
+
 class TestCampaignAuthorization:
     def test_create_without_token(self, client):
         resp = client.post("/campaign/", json={
@@ -243,6 +333,11 @@ class TestCampaignAuthorization:
 
     def test_toggle_without_token(self, client):
         resp = client.patch("/campaign/1/active")
+        assert resp.status_code == 401
+
+    def test_delete_campaign_requires_auth(self, client, db_session):
+        """DELETE /campaign/{id} tanpa token harus 401"""
+        resp = client.delete("/campaign/1")
         assert resp.status_code == 401
 
     def test_get_active_without_token(self, client):

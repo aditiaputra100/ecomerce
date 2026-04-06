@@ -7,7 +7,7 @@ class CampaignCreate(BaseModel):
     name: str
     start_time: Optional[datetime] = None
     end_time: datetime
-    is_active: bool = True
+    is_active: bool = False
 
 
 class CampaignUpdate(BaseModel):

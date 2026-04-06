@@ -104,3 +104,27 @@ def toggle_campaign_active(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"message": str(err.name)},
         )
+
+
+@router.delete("/{campaign_id}")
+def delete_campaign(
+    campaign_id: int,
+    current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
+    db: Session = Depends(get_db),
+):
+    try:
+        service.delete_campaign(db, id=campaign_id)
+        return {
+            "message": "Campaign deleted successfully",
+            "id": campaign_id,
+        }
+    except ValueError as err:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"message": str(err)},
+        )
+    except NotFoundError as err:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": str(err.name)},
+        )

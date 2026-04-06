@@ -11,9 +11,9 @@ class Campaign(TimeStampMixin, Base):
     name: Mapped[str] = mapped_column(nullable=False)
     start_time: Mapped[datetime] = mapped_column(nullable=False)
     end_time: Mapped[datetime] = mapped_column(nullable=False)
-    is_active: Mapped[bool] = mapped_column(default=True)
+    is_active: Mapped[bool] = mapped_column(default=False)
 
-    items = relationship('CampaignItem', back_populates='campaign')
+    items = relationship('CampaignItem', back_populates='campaign', cascade='all, delete-orphan')
 
 
 class CampaignItem(TimeStampMixin, Base):

@@ -45,7 +45,7 @@ class TestCreateCampaign:
 
         assert result is not None
         assert result.name == "Year End Sale"
-        assert result.is_active is True
+        assert result.is_active is False
 
     def test_create_empty_name_raises(self, db_session):
         start = _today()
@@ -207,26 +207,58 @@ class TestChangeActiveCampaign:
         with pytest.raises(NotFoundError):
             service.change_active_campaign(db_session, id=9999)
 
-
 # ═══════════════════════════════════════════════════════════════════════════
 #  delete_campaign
 # ═══════════════════════════════════════════════════════════════════════════
 
 class TestDeleteCampaign:
-    def test_delete_success(self, db_session):
-        campaign = _make_campaign(db_session, name="To Delete")
+    def test_delete_inactive_campaign_without_items_success(self, db_session):
+        """Campaign nonaktif tanpa produk — berhasil dihapus"""
+        campaign = _make_campaign(db_session, name="To Delete", is_active=False)
 
         service.delete_campaign(db_session, id=campaign.id)
 
         assert db_session.get(models.Campaign, campaign.id) is None
 
+    def test_delete_active_campaign_raises_error(self, db_session):
+        """Campaign aktif — tidak bisa dihapus, harus dinonaktifkan dulu"""
+        campaign = _make_campaign(db_session, name="Active Campaign", is_active=True)
+
+        with pytest.raises(ValueError, match="Cannot delete an active campaign"):
+            service.delete_campaign(db_session, id=campaign.id)
+
+        # Pastikan campaign masih ada di database
+        assert db_session.get(models.Campaign, campaign.id) is not None
+
+    def test_delete_campaign_with_items_raises_error(self, db_session):
+        """Campaign nonaktif TAPI memiliki produk — tidak bisa dihapus"""
+        campaign = _make_campaign(db_session, name="Has Items", is_active=False)
+
+        # Tambah CampaignItem ke campaign
+        item = models.CampaignItem(
+            campaign_id=campaign.id,
+            product_id=1,  # ID produk dummy
+            special_price=50000,
+            stock_limit=10,
+        )
+        db_session.add(item)
+        db_session.commit()
+
+        with pytest.raises(ValueError, match="Cannot delete campaign that has registered products"):
+            service.delete_campaign(db_session, id=campaign.id)
+
+        # Pastikan campaign masih ada
+        assert db_session.get(models.Campaign, campaign.id) is not None
+
     def test_delete_not_found_raises(self, db_session):
+        """Campaign tidak ditemukan — raise NotFoundError"""
         with pytest.raises(NotFoundError):
             service.delete_campaign(db_session, id=9999)
 
     def test_delete_does_not_affect_others(self, db_session):
-        campaign1 = _make_campaign(db_session, name="Keep", days_offset=0, duration_days=2)
-        campaign2 = _make_campaign(db_session, name="Delete", days_offset=5, duration_days=2)
+        """Menghapus satu campaign tidak menghapus campaign lainnya"""
+        campaign1 = _make_campaign(db_session, name="Keep", is_active=False, days_offset=0, duration_days=2)
+        campaign2 = _make_campaign(db_session, name="Delete", is_active=False, days_offset=5, duration_days=2)
 
         service.delete_campaign(db_session, id=campaign2.id)
 
