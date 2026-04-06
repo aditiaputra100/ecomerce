@@ -26,3 +26,11 @@ class MidtransResponse(BaseModel):
     token: str
     redirect_url: str
     order_id: str
+
+
+class WebhookStatusResponse(BaseModel):
+    status: str
+
+
+class MidtransConfigResponse(BaseModel):
+    clientKey: str

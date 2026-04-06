@@ -21,14 +21,14 @@ def _setup_shopowner(client, username="seller", email="seller@test.com"):
         "password": "password123", "disable": False,
     })
     login = client.post("/token", data={"username": username, "password": "password123"})
-    token = login.json()["access_token"]
+    token = login.json()["data"]["access_token"]
 
     client.post("/shops/", headers=_auth(token), data={
         "name": f"{username} Shop", "description": "Test shop",
     })
 
     login = client.post("/token", data={"username": username, "password": "password123"})
-    return login.json()["access_token"]
+    return login.json()["data"]["access_token"]
 
 
 def _auth(token):
@@ -38,7 +38,7 @@ def _auth(token):
 def _create_category(client, token, name="Test Category"):
     resp = client.post("/categories/", headers=_auth(token), json={"name": name})
     assert resp.status_code == 201
-    return resp.json()["id"]
+    return resp.json()["data"]["id"]
 
 
 def _create_product(client, token, category_id, name="Test Product", price=100.0, stock=10):
@@ -64,7 +64,8 @@ class TestCreateProduct:
         resp = _create_product(client, token, cat_id, name="Mechanical Keyboard")
 
         assert resp.status_code == 201
-        data = resp.json()["data"]
+        body = resp.json()
+        data = body["data"]
         assert data["name"] == "Mechanical Keyboard"
         assert data["id"] is not None
         assert data["image_url"] is not None
@@ -80,7 +81,9 @@ class TestCreateProduct:
             files={"image": ("test.jpg", io.BytesIO(b"\xff\xd8"), "image/jpeg")},
         )
         assert resp.status_code == 400
-        assert "Name cannot be empty" in resp.json()["detail"]
+        body = resp.json()
+        assert body["success"] is False
+        assert "Name cannot be empty" in body["message"]
 
     def test_invalid_price(self, client):
         token = _setup_shopowner(client)
@@ -92,6 +95,7 @@ class TestCreateProduct:
             files={"image": ("test.jpg", io.BytesIO(b"\xff\xd8"), "image/jpeg")},
         )
         assert resp.status_code == 400
+        assert resp.json()["success"] is False
 
     def test_invalid_category(self, client):
         token = _setup_shopowner(client)
@@ -102,6 +106,7 @@ class TestCreateProduct:
             files={"image": ("test.jpg", io.BytesIO(b"\xff\xd8"), "image/jpeg")},
         )
         assert resp.status_code == 400
+        assert resp.json()["success"] is False
 
     def test_missing_image(self, client):
         token = _setup_shopowner(client)
@@ -112,6 +117,7 @@ class TestCreateProduct:
                   "is_publish": True, "category_id": cat_id},
         )
         assert resp.status_code == 400
+        assert resp.json()["success"] is False
 
 
 class TestReadProduct:
@@ -126,7 +132,9 @@ class TestReadProduct:
 
         resp = client.get("/products/")
         assert resp.status_code == 200
-        assert len(resp.json()) == 2
+        body = resp.json()
+        products = body["data"]
+        assert len(products) == 2
 
     def test_get_product(self, client):
         token = _setup_shopowner(client)
@@ -137,11 +145,13 @@ class TestReadProduct:
 
         resp = client.get(f"/products/{product_id}")
         assert resp.status_code == 200
-        assert resp.json()["name"] == "Single Product"
+        body = resp.json()
+        assert body["data"]["name"] == "Single Product"
 
     def test_get_product_not_found(self, client):
         resp = client.get("/products/9999")
         assert resp.status_code == 404
+        assert resp.json()["success"] is False
 
 
 class TestUpdateProduct:
@@ -159,8 +169,9 @@ class TestUpdateProduct:
                   "price": 250.0, "stock": 20, "is_publish": True},
         )
         assert resp.status_code == 200
-        assert resp.json()["name"] == "New Name"
-        assert resp.json()["price"] == 250.0
+        body = resp.json()
+        assert body["data"]["name"] == "New Name"
+        assert body["data"]["price"] == 250.0
 
 
 class TestDeleteProduct:
@@ -175,7 +186,8 @@ class TestDeleteProduct:
 
         resp = client.delete(f"/products/{product_id}", headers=_auth(token))
         assert resp.status_code == 200
-        assert resp.json()["detail"] == "Product deleted"
+        body = resp.json()
+        assert body["message"] == "Product deleted successfully"
 
     def test_deleted_product_not_accessible(self, client):
         token = _setup_shopowner(client)
@@ -188,6 +200,7 @@ class TestDeleteProduct:
 
         resp = client.get(f"/products/{product_id}")
         assert resp.status_code == 404
+        assert resp.json()["success"] is False
 
 
 class TestPublishProduct:
@@ -203,12 +216,14 @@ class TestPublishProduct:
         # Toggle: published → not published
         resp = client.patch(f"/products/{product_id}/publish", headers=_auth(token))
         assert resp.status_code == 200
-        assert resp.json()["detail"] == "Product not published"
+        body = resp.json()
+        assert body["message"] == "Product not published"
 
         # Toggle kembali: not published → published
         resp = client.patch(f"/products/{product_id}/publish", headers=_auth(token))
         assert resp.status_code == 200
-        assert resp.json()["detail"] == "Product published"
+        body = resp.json()
+        assert body["message"] == "Product published"
 
 
 class TestProductAuthorization:
@@ -240,3 +255,4 @@ class TestProductAuthorization:
 
         resp = client.delete(f"/products/{product_id}", headers=_auth(token_b))
         assert resp.status_code == 403
+        assert resp.json()["success"] is False

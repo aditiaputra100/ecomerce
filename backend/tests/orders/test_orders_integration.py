@@ -25,14 +25,14 @@ def _setup_shopowner(client, username="seller", email="seller@test.com"):
         "password": "password123", "disable": False,
     })
     login = client.post("/token", data={"username": username, "password": "password123"})
-    token = login.json()["access_token"]
+    token = login.json()["data"]["access_token"]
 
     client.post("/shops/", headers=_auth(token), data={
         "name": f"{username} Shop", "description": "Test shop",
     })
 
     login = client.post("/token", data={"username": username, "password": "password123"})
-    return login.json()["access_token"]
+    return login.json()["data"]["access_token"]
 
 
 def _setup_customer(client, username="buyer", email="buyer@test.com"):
@@ -42,14 +42,14 @@ def _setup_customer(client, username="buyer", email="buyer@test.com"):
         "password": "password123", "disable": False,
     })
     login = client.post("/token", data={"username": username, "password": "password123"})
-    return login.json()["access_token"]
+    return login.json()["data"]["access_token"]
 
 
 def _create_category(client, token, name="Test Category"):
     """Create a product category."""
     resp = client.post("/categories/", headers=_auth(token), json={"name": name})
     assert resp.status_code == 201, resp.text
-    return resp.json()["id"]
+    return resp.json()["data"]["id"]
 
 
 def _create_product(client, token, name="Test Product", price=100.0, stock=10):
@@ -85,8 +85,9 @@ class TestCreateOrder:
         order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 3}]
         })
-        assert order_resp.status_code == 200, order_resp.text
-        order = order_resp.json()
+        assert order_resp.status_code == 201, order_resp.text
+        body = order_resp.json()
+        order = body["data"]
         assert order["total_price"] == 300.0
         assert order["status"] == "pending"
 
@@ -97,7 +98,9 @@ class TestCreateOrder:
             "items": [{"product_id": 9999, "quantity": 1}]
         })
         assert order_resp.status_code == 400
-        assert "not found" in order_resp.json()["detail"].lower()
+        body = order_resp.json()
+        assert body["success"] is False
+        assert "not found" in body["message"].lower()
 
     def test_create_order_insufficient_stock(self, client):
         # Setup seller & product
@@ -114,7 +117,9 @@ class TestCreateOrder:
             "items": [{"product_id": product_id, "quantity": 5}]
         })
         assert order_resp.status_code == 400
-        assert "insufficient stock" in order_resp.json()["detail"].lower()
+        body = order_resp.json()
+        assert body["success"] is False
+        assert "insufficient stock" in body["message"].lower()
 
     def test_prevent_self_purchase(self, client):
         seller_token = _setup_shopowner(client, username="seller3", email="seller3@test.com")
@@ -127,7 +132,9 @@ class TestCreateOrder:
             "items": [{"product_id": product_id, "quantity": 1}]
         })
         assert order_resp.status_code == 400
-        assert "cannot buy your own product" in order_resp.json()["detail"].lower()
+        body = order_resp.json()
+        assert body["success"] is False
+        assert "cannot buy your own product" in body["message"].lower()
 
     def test_allow_duplicate_orders(self, client):
         """After removal of duplicate check, user can order same products multiple times."""
@@ -142,13 +149,13 @@ class TestCreateOrder:
         order1 = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 2}]
         })
-        assert order1.status_code == 200
+        assert order1.status_code == 201
 
         # Second order (same product, should succeed now)
         order2 = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 2}]
         })
-        assert order2.status_code == 200, order2.text
+        assert order2.status_code == 201, order2.text
 
 
 class TestCancelOrder:
@@ -168,23 +175,24 @@ class TestCancelOrder:
         order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 3}]
         })
-        assert order_resp.status_code == 200
-        order_id = order_resp.json()["id"]
+        assert order_resp.status_code == 201
+        order_id = order_resp.json()["data"]["id"]
 
         # Cancel order
         cancel_resp = client.delete(f"/orders/{order_id}", headers=_auth(buyer_token))
         assert cancel_resp.status_code == 200
-        assert "Success delete order" in cancel_resp.json()["message"]
+        body = cancel_resp.json()
+        assert "Success delete order" in body["message"]
 
         # Verify order status is deleted
         orders_resp = client.get("/orders/", headers=_auth(buyer_token))
-        orders = orders_resp.json()
+        orders = orders_resp.json()["data"]
         order = next(o for o in orders if o["id"] == order_id)
         assert order["status"] == "deleted"
 
         # Verify stock is restored
         prod_list = client.get("/products/")
-        product = next(p for p in prod_list.json() if p["id"] == product_id)
+        product = next(p for p in prod_list.json()["data"] if p["id"] == product_id)
         assert product["stock"] == 10  # 10 - 3 + 3 = 10
 
     def test_cancel_non_pending_order(self, client):
@@ -201,8 +209,8 @@ class TestCancelOrder:
         order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 2}]
         })
-        assert order_resp.status_code == 200
-        order_id = order_resp.json()["id"]
+        assert order_resp.status_code == 201
+        order_id = order_resp.json()["data"]["id"]
 
         # Change status to processing
         status_resp = client.patch(
@@ -215,14 +223,18 @@ class TestCancelOrder:
         # Try to cancel non-pending order
         cancel_resp = client.delete(f"/orders/{order_id}", headers=_auth(buyer_token))
         assert cancel_resp.status_code == 400
-        assert "only pending" in cancel_resp.json()["detail"].lower()
+        body = cancel_resp.json()
+        assert body["success"] is False
+        assert "only pending" in body["message"].lower()
 
     def test_cancel_order_not_found(self, client):
         buyer_token = _setup_customer(client, username="buyer7", email="buyer7@test.com")
 
         cancel_resp = client.delete(f"/orders/9999", headers=_auth(buyer_token))
         assert cancel_resp.status_code == 400
-        assert "not found" in cancel_resp.json()["detail"].lower()
+        body = cancel_resp.json()
+        assert body["success"] is False
+        assert "not found" in body["message"].lower()
 
     def test_cancel_other_user_order(self, client):
         # Setup seller & product
@@ -241,13 +253,15 @@ class TestCancelOrder:
         order_resp = client.post("/orders/", headers=_auth(buyer_a_token), json={
             "items": [{"product_id": product_id, "quantity": 1}]
         })
-        assert order_resp.status_code == 200
-        order_id = order_resp.json()["id"]
+        assert order_resp.status_code == 201
+        order_id = order_resp.json()["data"]["id"]
 
         # Buyer B tries to cancel buyer A's order
         cancel_resp = client.delete(f"/orders/{order_id}", headers=_auth(buyer_b_token))
         assert cancel_resp.status_code == 403
-        assert "not allowed" in cancel_resp.json()["detail"].lower()
+        body = cancel_resp.json()
+        assert body["success"] is False
+        assert "not allowed" in body["message"].lower()
 
 
 class TestListOrders:
@@ -265,17 +279,18 @@ class TestListOrders:
         order1 = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 1}]
         })
-        assert order1.status_code == 200
+        assert order1.status_code == 201
 
         order2 = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 2}]
         })
-        assert order2.status_code == 200
+        assert order2.status_code == 201
 
         # List orders
         list_resp = client.get("/orders/", headers=_auth(buyer_token))
         assert list_resp.status_code == 200
-        orders = list_resp.json()
+        body = list_resp.json()
+        orders = body["data"]
         assert len(orders) == 2
 
     def test_list_shop_orders(self, client):
@@ -290,13 +305,14 @@ class TestListOrders:
         order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 2}]
         })
-        assert order_resp.status_code == 200
-        order_id = order_resp.json()["id"]
+        assert order_resp.status_code == 201
+        order_id = order_resp.json()["data"]["id"]
 
         # Seller lists shop orders
         shop_orders = client.get("/orders/shop", headers=_auth(seller_token))
         assert shop_orders.status_code == 200
-        orders = shop_orders.json()
+        body = shop_orders.json()
+        orders = body["data"]
         assert len(orders) == 1
         assert orders[0]["id"] == order_id
         assert orders[0]["owner"]["username"] == "buyer9"
@@ -317,8 +333,8 @@ class TestOrderStatus:
         order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 1}]
         })
-        assert order_resp.status_code == 200
-        order_id = order_resp.json()["id"]
+        assert order_resp.status_code == 201
+        order_id = order_resp.json()["data"]["id"]
 
         # Seller updates to processing
         status_resp = client.patch(
@@ -327,7 +343,8 @@ class TestOrderStatus:
             json={"status": "processing"}
         )
         assert status_resp.status_code == 200
-        assert status_resp.json()["status"] == "processing"
+        body = status_resp.json()
+        assert body["data"]["status"] == "processing"
 
         # Seller updates to shipped
         status_resp = client.patch(
@@ -336,7 +353,8 @@ class TestOrderStatus:
             json={"status": "shipped"}
         )
         assert status_resp.status_code == 200
-        assert status_resp.json()["status"] == "shipped"
+        body = status_resp.json()
+        assert body["data"]["status"] == "shipped"
 
     def test_buyer_complete_order(self, client):
         seller_token = _setup_shopowner(client, username="seller11", email="seller11@test.com")
@@ -350,8 +368,8 @@ class TestOrderStatus:
         order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 1}]
         })
-        assert order_resp.status_code == 200
-        order_id = order_resp.json()["id"]
+        assert order_resp.status_code == 201
+        order_id = order_resp.json()["data"]["id"]
 
         # Seller sets to shipped
         client.patch(
@@ -372,7 +390,8 @@ class TestOrderStatus:
             json={"status": "completed"}
         )
         assert complete_resp.status_code == 200
-        assert complete_resp.json()["status"] == "completed"
+        body = complete_resp.json()
+        assert body["data"]["status"] == "completed"
 
     def test_buyer_cannot_set_shipped(self, client):
         seller_token = _setup_shopowner(client, username="seller12", email="seller12@test.com")
@@ -386,8 +405,8 @@ class TestOrderStatus:
         order_resp = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 1}]
         })
-        assert order_resp.status_code == 200
-        order_id = order_resp.json()["id"]
+        assert order_resp.status_code == 201
+        order_id = order_resp.json()["data"]["id"]
 
         # Buyer tries to set to shipped (should fail)
         fail_resp = client.patch(
@@ -396,6 +415,7 @@ class TestOrderStatus:
             json={"status": "shipped"}
         )
         assert fail_resp.status_code == 403
+        assert fail_resp.json()["success"] is False
 
 
 class TestOrderAuthorization:

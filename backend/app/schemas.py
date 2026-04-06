@@ -1,14 +1,16 @@
 # Global schemas
 
 from pydantic import BaseModel, ConfigDict
-from typing import Any, Optional
+from typing import Optional
 from app.products.schemas import ProductBase
 from app.user.schemas import User
 from app.categories.schemas import Category as CategorySchema
 
 
-class CreatedResponse(BaseModel):
-    data: Any
+class SuccessResponse[T, S](BaseModel):
+    message: str
+    data: Optional[T] = None
+    metadata: Optional[S] = None
 
 
 class Product(ProductBase):

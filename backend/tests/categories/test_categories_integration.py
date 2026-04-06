@@ -10,14 +10,14 @@ def _setup_shopowner(client, username="seller", email="seller@test.com"):
         "password": "password123", "disable": False,
     })
     login = client.post("/token", data={"username": username, "password": "password123"})
-    token = login.json()["access_token"]
+    token = login.json()["data"]["access_token"]
 
     client.post("/shops/", headers=_auth(token), data={
         "name": f"{username} Shop", "description": "Test shop",
     })
 
     login = client.post("/token", data={"username": username, "password": "password123"})
-    return login.json()["access_token"]
+    return login.json()["data"]["access_token"]
 
 
 def _auth(token):
@@ -35,10 +35,10 @@ class TestCreateCategory:
         })
 
         assert resp.status_code == 201
-        data = resp.json()
-        assert data["id"] is not None
-        assert data["name"] == "Elektronik"
-        assert data["description"] == "Semua barang elektronik"
+        body = resp.json()
+        assert body["data"]["id"] is not None
+        assert body["data"]["name"] == "Elektronik"
+        assert body["data"]["description"] == "Semua barang elektronik"
 
     def test_duplicate_name(self, client):
         token = _setup_shopowner(client)
@@ -66,7 +66,8 @@ class TestReadCategory:
 
         resp = client.get("/categories/")
         assert resp.status_code == 200
-        categories = resp.json()
+        body = resp.json()
+        categories = body["data"]
         assert len(categories) == 2
         assert categories[0]["name"] == "A-Elektronik"
         assert categories[1]["name"] == "B-Olahraga"
@@ -75,11 +76,12 @@ class TestReadCategory:
         token = _setup_shopowner(client)
 
         create_resp = client.post("/categories/", headers=_auth(token), json={"name": "Makanan"})
-        cat_id = create_resp.json()["id"]
+        cat_id = create_resp.json()["data"]["id"]
 
         resp = client.get(f"/categories/{cat_id}")
         assert resp.status_code == 200
-        assert resp.json()["name"] == "Makanan"
+        body = resp.json()
+        assert body["data"]["name"] == "Makanan"
 
     def test_get_category_not_found(self, client):
         resp = client.get("/categories/9999")
@@ -95,15 +97,16 @@ class TestUpdateCategory:
         create_resp = client.post("/categories/", headers=_auth(token), json={
             "name": "Old Name", "description": "Old desc",
         })
-        cat_id = create_resp.json()["id"]
+        cat_id = create_resp.json()["data"]["id"]
 
         resp = client.put(f"/categories/{cat_id}", headers=_auth(token), json={
             "name": "New Name", "description": "Updated desc",
         })
 
         assert resp.status_code == 200
-        assert resp.json()["name"] == "New Name"
-        assert resp.json()["description"] == "Updated desc"
+        body = resp.json()
+        assert body["data"]["name"] == "New Name"
+        assert body["data"]["description"] == "Updated desc"
 
     def test_not_found(self, client):
         token = _setup_shopowner(client)
@@ -116,10 +119,11 @@ class TestUpdateCategory:
 
         client.post("/categories/", headers=_auth(token), json={"name": "Existing"})
         create_resp = client.post("/categories/", headers=_auth(token), json={"name": "ToUpdate"})
-        cat_id = create_resp.json()["id"]
+        cat_id = create_resp.json()["data"]["id"]
 
         resp = client.put(f"/categories/{cat_id}", headers=_auth(token), json={"name": "Existing"})
         assert resp.status_code == 409
+        assert resp.json()["success"] is False
 
 
 class TestDeleteCategory:
@@ -129,21 +133,24 @@ class TestDeleteCategory:
         token = _setup_shopowner(client)
 
         create_resp = client.post("/categories/", headers=_auth(token), json={"name": "To Delete"})
-        cat_id = create_resp.json()["id"]
+        cat_id = create_resp.json()["data"]["id"]
 
         resp = client.delete(f"/categories/{cat_id}", headers=_auth(token))
-        assert resp.status_code == 204
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["data"] is None
 
     def test_deleted_category_not_accessible(self, client):
         token = _setup_shopowner(client)
 
         create_resp = client.post("/categories/", headers=_auth(token), json={"name": "To Delete"})
-        cat_id = create_resp.json()["id"]
+        cat_id = create_resp.json()["data"]["id"]
 
         client.delete(f"/categories/{cat_id}", headers=_auth(token))
 
         resp = client.get(f"/categories/{cat_id}")
         assert resp.status_code == 404
+        assert resp.json()["success"] is False
 
     def test_not_found(self, client):
         token = _setup_shopowner(client)
