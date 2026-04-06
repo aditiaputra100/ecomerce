@@ -4,29 +4,8 @@ from app.products.service import get_product_by_id
 from app.products.models import Product
 from app.payments import service as payment_service
 
-ACTIVE_ORDER_STATUSES = {"pending", "processing", "shipped"}
-
-
-def _items_signature(items):
-    return tuple(sorted((item.product_id, item.quantity) for item in items))
-
-
-def _ensure_not_duplicate_order(db: Session, user_id: int, order_data: schemas.OrderCreate):
-    desired_signature = _items_signature(order_data.items)
-    existing_orders = (
-        db.query(models.Order)
-        .filter(models.Order.user_id == user_id, models.Order.status.in_(ACTIVE_ORDER_STATUSES))
-        .options(joinedload(models.Order.items))
-        .all()
-    )
-
-    for order in existing_orders:
-        if _items_signature(order.items) == desired_signature:
-            raise ValueError("You already placed this order. Complete or cancel the previous one before retrying.")
-
 
 def create_order(db: Session, user_id: int, order_data: schemas.OrderCreate):
-    _ensure_not_duplicate_order(db, user_id, order_data)
     total_price = 0
     order_items = []
     
@@ -113,3 +92,25 @@ def update_order_status(db: Session, order_id: int, status: str, user_id: int):
     db.commit()
     db.refresh(db_order)
     return db_order
+
+def cancel_order(db: Session, order_id: int, user_id: int):
+    db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not db_order:
+        raise ValueError("Order not found")
+    
+    if db_order.user_id != user_id:
+        raise PermissionError("You are not allowed to cancel this order")
+    
+    if db_order.status != "pending":
+        raise ValueError("Only pending orders can be cancelled")
+    
+    db_order.status = "deleted"
+    
+    # Restore product stock
+    for item in db_order.items:
+        item.product.stock += item.quantity
+    
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+

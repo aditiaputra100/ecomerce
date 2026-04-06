@@ -62,3 +62,22 @@ def update_order_status(
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.delete("/{order_id}")
+def cancel_order(
+    order_id: int,
+    current_user: Annotated[User, Security(get_current_user, scopes=["customer"])],
+    db: Session = Depends(get_db),
+):
+    """
+    Cancel a pending order and restore product stock.
+    Only the order owner can cancel their own order.
+    """
+    try:
+        service.cancel_order(db, order_id, current_user.id)
+        return {"message": f"Success delete order {order_id}"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
