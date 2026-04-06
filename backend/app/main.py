@@ -53,7 +53,11 @@ app.add_exception_handler(exceptions.ResourceDisableError, exceptions.resource_d
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     """Custom HTTPException handler to use ApiResponse format"""
-    return error_response(message=exc.detail, status_code=exc.status_code)
+    response = error_response(message=exc.detail, status_code=exc.status_code)
+    # Preserve any custom headers (e.g., WWW-Authenticate for 401)
+    if exc.headers:
+        response.headers.update(exc.headers)
+    return response
 
 
 # Include Routers

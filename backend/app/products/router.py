@@ -39,7 +39,8 @@ def _validate_category(db: Session, category_id: Optional[int]):
 @router.get("/")
 def list_products(category: Optional[str] = None, username: str | None = None, db: Session = Depends(get_db)):
     products = service.get_products(db, username=username)
-    return success_response(data=products, message="Products retrieved successfully")
+    products_response = [Product.model_validate(p) for p in products]
+    return success_response(data=products_response, message="Products retrieved successfully")
 
 @router.get("/homepage", response_model=schemas.ProductHomePage)
 async def products_homepage():
@@ -52,7 +53,8 @@ def get_my_products(
 ):
     _ensure_shop_owner(current_user)
     products = service.get_products_by_user_id(db, current_user.id)
-    return success_response(data=products, message="Your products retrieved successfully")
+    products_response = [Product.model_validate(p) for p in products]
+    return success_response(data=products_response, message="Your products retrieved successfully")
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_product(
@@ -157,7 +159,8 @@ async def update_product(
     }
 
     updated_product = service.update_product(db, product_id, product_data, image_url)
-    return success_response(data=updated_product, message="Product updated successfully")
+    product_response = Product.model_validate(updated_product)
+    return success_response(data=product_response, message="Product updated successfully")
 
 @router.delete("/{product_id}")
 def delete_product(
@@ -188,7 +191,8 @@ def get_product(product_id: int, db: Annotated[Session, Depends(get_db)]):
     if not product:
         raise NotFoundError(name=f"Product with an ID {product_id} is not found")
     
-    return success_response(data=product, message="Product retrieved successfully")
+    product_response = Product.model_validate(product)
+    return success_response(data=product_response, message="Product retrieved successfully")
 
 @router.patch("/{product_id}/publish")
 def publish_product(
@@ -209,4 +213,5 @@ def publish_product(
     db.commit()
 
     message = f"Product {'published' if product.is_publish else 'not published'}"
-    return success_response(data=product, message=message)
+    product_response = Product.model_validate(product)
+    return success_response(data=product_response, message=message)

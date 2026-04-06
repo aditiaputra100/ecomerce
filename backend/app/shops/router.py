@@ -30,7 +30,8 @@ async def open_shop(
 
     payload = schemas.ShopCreate(name=name, description=description)
     shop = service.create_shop(db, current_user.id, payload, logo_url)
-    return success_response(data=shop, status_code=201)
+    shop_response = schemas.Shop.model_validate(shop)
+    return success_response(data=shop_response, status_code=201)
 
 
 @router.get("/me")
@@ -41,10 +42,12 @@ def get_my_shop(
     shop = service.get_shop_by_owner(db, current_user.id)
     if not shop:
         raise HTTPException(status_code=404, detail="You do not own a shop")
-    return success_response(data=shop)
+    shop_response = schemas.Shop.model_validate(shop)
+    return success_response(data=shop_response)
 
 
 @router.get("/{username}")
 def get_shop(username: str, db: Session = Depends(get_db)):
     shop = service.get_shop_by_username(db, username)
-    return success_response(data=shop)
+    shop_response = schemas.Shop.model_validate(shop)
+    return success_response(data=shop_response)

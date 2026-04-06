@@ -19,7 +19,9 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
         disable=user_data.disable,
         db=db
     )
-    return success_response(data=new_user, status_code=201)
+    # Convert to Pydantic schema to avoid exposing sensitive fields
+    user_response = schemas.User.model_validate(new_user)
+    return success_response(data=user_response, status_code=201)
 
 @auth.post("/token")
 def token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
