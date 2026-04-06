@@ -36,7 +36,6 @@ class TestCreateCategory:
 
         assert resp.status_code == 201
         body = resp.json()
-        assert body["success"] is True
         assert body["data"]["id"] is not None
         assert body["data"]["name"] == "Elektronik"
         assert body["data"]["description"] == "Semua barang elektronik"
@@ -68,7 +67,6 @@ class TestReadCategory:
         resp = client.get("/categories/")
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         categories = body["data"]
         assert len(categories) == 2
         assert categories[0]["name"] == "A-Elektronik"
@@ -83,7 +81,6 @@ class TestReadCategory:
         resp = client.get(f"/categories/{cat_id}")
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         assert body["data"]["name"] == "Makanan"
 
     def test_get_category_not_found(self, client):
@@ -108,7 +105,6 @@ class TestUpdateCategory:
 
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         assert body["data"]["name"] == "New Name"
         assert body["data"]["description"] == "Updated desc"
 
@@ -142,7 +138,6 @@ class TestDeleteCategory:
         resp = client.delete(f"/categories/{cat_id}", headers=_auth(token))
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         assert body["data"] is None
 
     def test_deleted_category_not_accessible(self, client):

@@ -14,7 +14,7 @@ from app.database import get_db
 from app.exceptions import NotFoundError, FileMaximumError
 from app.user.dependencies import get_current_user
 from app.user.models import User
-from app.schemas import success_response, Product
+from app.schemas import SuccessResponse, Product
 from app.categories.models import Category
 from . import schemas, service
 
@@ -36,17 +36,17 @@ def _validate_category(db: Session, category_id: Optional[int]):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found or inactive")
     return category
 
-@router.get("/")
+@router.get("/", response_model=SuccessResponse[list[Product], None])
 def list_products(category: Optional[str] = None, username: str | None = None, db: Session = Depends(get_db)):
     products = service.get_products(db, username=username)
     products_response = [Product.model_validate(p) for p in products]
-    return success_response(data=products_response, message="Products retrieved successfully")
+    return SuccessResponse(message="Products retrieved successfully", data=products_response)
 
 @router.get("/homepage", response_model=schemas.ProductHomePage)
 async def products_homepage():
     pass
 
-@router.get("/me")
+@router.get("/me", response_model=SuccessResponse[list[Product], None])
 def get_my_products(
     current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
     db: Session = Depends(get_db)
@@ -54,9 +54,9 @@ def get_my_products(
     _ensure_shop_owner(current_user)
     products = service.get_products_by_user_id(db, current_user.id)
     products_response = [Product.model_validate(p) for p in products]
-    return success_response(data=products_response, message="Your products retrieved successfully")
+    return SuccessResponse(message="Your products retrieved successfully", data=products_response)
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=SuccessResponse[Product, None])
 async def create_product(
     current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
     name: str = Form(...),
@@ -113,9 +113,9 @@ async def create_product(
         )
     
     product = Product.model_validate(response_data)
-    return success_response(data=product, message="Product created successfully", status_code=201)
+    return SuccessResponse(message="Product created successfully", data=product)
 
-@router.put("/{product_id}")
+@router.put("/{product_id}", response_model=SuccessResponse[Product, None])
 async def update_product(
     product_id: int,
     current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
@@ -160,9 +160,9 @@ async def update_product(
 
     updated_product = service.update_product(db, product_id, product_data, image_url)
     product_response = Product.model_validate(updated_product)
-    return success_response(data=product_response, message="Product updated successfully")
+    return SuccessResponse(message="Product updated successfully", data=product_response)
 
-@router.delete("/{product_id}")
+@router.delete("/{product_id}", response_model=SuccessResponse[None, None])
 def delete_product(
     product_id: int,
     current_user: Annotated[User, Security(get_current_user, scopes=['shopowner'])],
@@ -182,9 +182,9 @@ def delete_product(
     if not success:
          raise HTTPException(status_code=500, detail="Failed to delete product")
     
-    return success_response(data=None, message="Product deleted successfully")
+    return SuccessResponse(message="Product deleted successfully", data=None)
 
-@router.get("/{product_id}")
+@router.get("/{product_id}", response_model=SuccessResponse[Product, None])
 def get_product(product_id: int, db: Annotated[Session, Depends(get_db)]):
     product = service.get_product_by_id(db, product_id)
 
@@ -192,9 +192,9 @@ def get_product(product_id: int, db: Annotated[Session, Depends(get_db)]):
         raise NotFoundError(name=f"Product with an ID {product_id} is not found")
     
     product_response = Product.model_validate(product)
-    return success_response(data=product_response, message="Product retrieved successfully")
+    return SuccessResponse(message="Product retrieved successfully", data=product_response)
 
-@router.patch("/{product_id}/publish")
+@router.patch("/{product_id}/publish", response_model=SuccessResponse[Product, None])
 def publish_product(
     product_id: int, 
     current_user: Annotated[User, Security(get_current_user, scopes=['shopowner'])],
@@ -214,4 +214,4 @@ def publish_product(
 
     message = f"Product {'published' if product.is_publish else 'not published'}"
     product_response = Product.model_validate(product)
-    return success_response(data=product_response, message=message)
+    return SuccessResponse(message=message, data=product_response)

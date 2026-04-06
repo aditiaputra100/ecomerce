@@ -15,7 +15,8 @@ from app.shops.router import router as shop_router
 from app.payments.router import router as payment_router
 from app.categories.router import router as category_router
 from app.campaign.router import router as campaign_router
-from app.schemas import error_response, ApiResponse
+from app.schemas import error_response, ApiResponse, SuccessResponse
+from dataclasses import dataclass
 from . import exceptions
 import os
 
@@ -70,10 +71,20 @@ app.include_router(payment_router)
 app.include_router(category_router)
 app.include_router(campaign_router)
 
-@app.get("/")
+
+@dataclass
+class RootResponse:
+    docs: str
+    static_files: str
+
+
+@app.get("/", response_model=SuccessResponse[RootResponse, None])
 def read_root():
-    return ApiResponse(
-        success=True,
+
+    return SuccessResponse(
         message="Welcome to E-Commerce API (Modular Architecture)",
-        data={"docs": "/docs", "static_files": "/static"}
-    ).model_dump()
+        data={
+            "docs": "/docs",
+            "static_files": "/static"
+        }
+    )

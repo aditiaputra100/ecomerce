@@ -252,9 +252,8 @@ class TestDeleteCampaign:
 
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         assert body["message"] == "Campaign deleted successfully"
-        assert body["data"]["id"] == campaign_id
+        assert body["data"] is None
 
     def test_delete_active_campaign_rejected(self, client, db_session):
         """Test menghapus campaign aktif — expect 400"""

@@ -4,13 +4,13 @@ from typing import Annotated, Optional
 from app.database import get_db
 from app.user.dependencies import get_current_user
 from app.user.models import User
-from app.schemas import success_response
+from app.schemas import SuccessResponse
 from . import schemas, service
 
 router = APIRouter(prefix="/shops", tags=["Shops"])
 
 
-@router.post("/")
+@router.post("/", status_code=201, response_model=SuccessResponse[schemas.Shop, None])
 async def open_shop(
     current_user: Annotated[User, Security(get_current_user, scopes=["me"])],
     db: Session = Depends(get_db),
@@ -31,10 +31,10 @@ async def open_shop(
     payload = schemas.ShopCreate(name=name, description=description)
     shop = service.create_shop(db, current_user.id, payload, logo_url)
     shop_response = schemas.Shop.model_validate(shop)
-    return success_response(data=shop_response, status_code=201)
+    return SuccessResponse(message="", data=shop_response)
 
 
-@router.get("/me")
+@router.get("/me", response_model=SuccessResponse[schemas.Shop, None])
 def get_my_shop(
     current_user: Annotated[User, Security(get_current_user, scopes=["me"])],
     db: Session = Depends(get_db),
@@ -43,11 +43,11 @@ def get_my_shop(
     if not shop:
         raise HTTPException(status_code=404, detail="You do not own a shop")
     shop_response = schemas.Shop.model_validate(shop)
-    return success_response(data=shop_response)
+    return SuccessResponse(message="", data=shop_response)
 
 
-@router.get("/{username}")
+@router.get("/{username}", response_model=SuccessResponse[schemas.Shop, None])
 def get_shop(username: str, db: Session = Depends(get_db)):
     shop = service.get_shop_by_username(db, username)
     shop_response = schemas.Shop.model_validate(shop)
-    return success_response(data=shop_response)
+    return SuccessResponse(message="", data=shop_response)

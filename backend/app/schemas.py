@@ -10,6 +10,12 @@ from app.categories.schemas import Category as CategorySchema
 T = TypeVar("T")
 
 
+class SuccessResponse[X, Y](BaseModel):
+    message: str
+    data: Optional[X] = None
+    metadata: Optional[Y] = None
+
+
 class ApiResponse(BaseModel, Generic[T]):
     """Global API response wrapper for consistency across all endpoints"""
     success: bool

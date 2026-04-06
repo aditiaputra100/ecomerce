@@ -87,7 +87,6 @@ class TestCreateOrder:
         })
         assert order_resp.status_code == 201, order_resp.text
         body = order_resp.json()
-        assert body["success"] is True
         order = body["data"]
         assert order["total_price"] == 300.0
         assert order["status"] == "pending"
@@ -151,14 +150,12 @@ class TestCreateOrder:
             "items": [{"product_id": product_id, "quantity": 2}]
         })
         assert order1.status_code == 201
-        assert order1.json()["success"] is True
 
         # Second order (same product, should succeed now)
         order2 = client.post("/orders/", headers=_auth(buyer_token), json={
             "items": [{"product_id": product_id, "quantity": 2}]
         })
         assert order2.status_code == 201, order2.text
-        assert order2.json()["success"] is True
 
 
 class TestCancelOrder:
@@ -185,7 +182,6 @@ class TestCancelOrder:
         cancel_resp = client.delete(f"/orders/{order_id}", headers=_auth(buyer_token))
         assert cancel_resp.status_code == 200
         body = cancel_resp.json()
-        assert body["success"] is True
         assert "Success delete order" in body["message"]
 
         # Verify order status is deleted
@@ -294,7 +290,6 @@ class TestListOrders:
         list_resp = client.get("/orders/", headers=_auth(buyer_token))
         assert list_resp.status_code == 200
         body = list_resp.json()
-        assert body["success"] is True
         orders = body["data"]
         assert len(orders) == 2
 
@@ -317,7 +312,6 @@ class TestListOrders:
         shop_orders = client.get("/orders/shop", headers=_auth(seller_token))
         assert shop_orders.status_code == 200
         body = shop_orders.json()
-        assert body["success"] is True
         orders = body["data"]
         assert len(orders) == 1
         assert orders[0]["id"] == order_id
@@ -350,7 +344,6 @@ class TestOrderStatus:
         )
         assert status_resp.status_code == 200
         body = status_resp.json()
-        assert body["success"] is True
         assert body["data"]["status"] == "processing"
 
         # Seller updates to shipped
@@ -361,7 +354,6 @@ class TestOrderStatus:
         )
         assert status_resp.status_code == 200
         body = status_resp.json()
-        assert body["success"] is True
         assert body["data"]["status"] == "shipped"
 
     def test_buyer_complete_order(self, client):
@@ -399,7 +391,6 @@ class TestOrderStatus:
         )
         assert complete_resp.status_code == 200
         body = complete_resp.json()
-        assert body["success"] is True
         assert body["data"]["status"] == "completed"
 
     def test_buyer_cannot_set_shipped(self, client):

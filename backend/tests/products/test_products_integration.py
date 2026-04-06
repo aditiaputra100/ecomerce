@@ -65,7 +65,6 @@ class TestCreateProduct:
 
         assert resp.status_code == 201
         body = resp.json()
-        assert body["success"] is True
         data = body["data"]
         assert data["name"] == "Mechanical Keyboard"
         assert data["id"] is not None
@@ -134,7 +133,6 @@ class TestReadProduct:
         resp = client.get("/products/")
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         products = body["data"]
         assert len(products) == 2
 
@@ -148,7 +146,6 @@ class TestReadProduct:
         resp = client.get(f"/products/{product_id}")
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         assert body["data"]["name"] == "Single Product"
 
     def test_get_product_not_found(self, client):
@@ -173,7 +170,6 @@ class TestUpdateProduct:
         )
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         assert body["data"]["name"] == "New Name"
         assert body["data"]["price"] == 250.0
 
@@ -191,7 +187,6 @@ class TestDeleteProduct:
         resp = client.delete(f"/products/{product_id}", headers=_auth(token))
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         assert body["message"] == "Product deleted successfully"
 
     def test_deleted_product_not_accessible(self, client):
@@ -222,14 +217,12 @@ class TestPublishProduct:
         resp = client.patch(f"/products/{product_id}/publish", headers=_auth(token))
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         assert body["message"] == "Product not published"
 
         # Toggle kembali: not published → published
         resp = client.patch(f"/products/{product_id}/publish", headers=_auth(token))
         assert resp.status_code == 200
         body = resp.json()
-        assert body["success"] is True
         assert body["message"] == "Product published"
 
 

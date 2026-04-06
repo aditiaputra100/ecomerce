@@ -5,14 +5,14 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.user.dependencies import get_current_user
 from app.user.models import User
-from app.schemas import success_response
+from app.schemas import SuccessResponse
 from app.exceptions import NotFoundError
 from . import schemas, service
 
 router = APIRouter(prefix="/campaign", tags=["Campaign"])
 
 
-@router.post("/")
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=SuccessResponse[schemas.CampaignResponse, None])
 def create_campaign(
     payload: schemas.CampaignCreate,
     current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
@@ -26,30 +26,26 @@ def create_campaign(
             end_time=payload.end_time,
             is_active=payload.is_active,
         )
-        campaign_data = schemas.CampaignResponse.model_validate(campaign).model_dump()
-        return success_response(
-            data=campaign_data,
-            message="Campaign created successfully",
-            status_code=201
-        )
+        campaign_data = schemas.CampaignResponse.model_validate(campaign)
+        return SuccessResponse(message="Campaign created successfully", data=campaign_data)
     except ValueError as err:
         raise HTTPException(status_code=400, detail=str(err))
 
 
-@router.get("/active")
+@router.get("/active", response_model=SuccessResponse[list[schemas.CampaignResponse], None])
 def get_active_campaigns(db: Session = Depends(get_db)):
     try:
         campaigns = service.get_active_campaign(db)
         campaigns_data = [
-            schemas.CampaignResponse.model_validate(c).model_dump()
+            schemas.CampaignResponse.model_validate(c)
             for c in campaigns
         ]
-        return success_response(data=campaigns_data)
+        return SuccessResponse(message="", data=campaigns_data)
     except RuntimeError as err:
         raise HTTPException(status_code=500, detail=str(err))
 
 
-@router.put("/{campaign_id}")
+@router.put("/{campaign_id}", response_model=SuccessResponse[schemas.CampaignResponse, None])
 def update_campaign(
     campaign_id: int,
     payload: schemas.CampaignUpdate,
@@ -65,18 +61,15 @@ def update_campaign(
             end_time=payload.end_time,
             is_active=payload.is_active,
         )
-        campaign_data = schemas.CampaignResponse.model_validate(campaign).model_dump()
-        return success_response(
-            data=campaign_data,
-            message="Campaign updated successfully"
-        )
+        campaign_data = schemas.CampaignResponse.model_validate(campaign)
+        return SuccessResponse(message="Campaign updated successfully", data=campaign_data)
     except ValueError as err:
         raise HTTPException(status_code=400, detail=str(err))
     except NotFoundError as err:
         raise HTTPException(status_code=404, detail=str(err.name))
 
 
-@router.patch("/{campaign_id}/active")
+@router.patch("/{campaign_id}/active", response_model=SuccessResponse[schemas.CampaignResponse, None])
 def toggle_campaign_active(
     campaign_id: int,
     current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
@@ -85,16 +78,13 @@ def toggle_campaign_active(
     try:
         campaign = service.change_active_campaign(db, id=campaign_id)
         action = "activated" if campaign.is_active else "deactivated"
-        campaign_data = schemas.CampaignResponse.model_validate(campaign).model_dump()
-        return success_response(
-            data=campaign_data,
-            message=f"Campaign {action} successfully"
-        )
+        campaign_data = schemas.CampaignResponse.model_validate(campaign)
+        return SuccessResponse(message=f"Campaign {action} successfully", data=campaign_data)
     except NotFoundError as err:
         raise HTTPException(status_code=404, detail=str(err.name))
 
 
-@router.delete("/{campaign_id}")
+@router.delete("/{campaign_id}", response_model=SuccessResponse[None, None])
 def delete_campaign(
     campaign_id: int,
     current_user: Annotated[User, Security(get_current_user, scopes=["shopowner"])],
@@ -102,10 +92,7 @@ def delete_campaign(
 ):
     try:
         service.delete_campaign(db, id=campaign_id)
-        return success_response(
-            data={"id": campaign_id},
-            message="Campaign deleted successfully"
-        )
+        return SuccessResponse(message="Campaign deleted successfully", data=None)
     except ValueError as err:
         raise HTTPException(status_code=400, detail=str(err))
     except NotFoundError as err:
