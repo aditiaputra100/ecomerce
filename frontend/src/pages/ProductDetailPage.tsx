@@ -5,7 +5,6 @@ import {
   Breadcrumbs,
   Button,
   CardContent,
-  CardMedia,
   CircularProgress,
   Container,
   Stack,
@@ -14,8 +13,8 @@ import {
   useTheme,
 } from '@mui/material'
 import {Error as ErrorIcon} from '@mui/icons-material'
-import { getProduct } from '../services/api'
-import type { Product } from '../types/api'
+import { getProduct } from '../services'
+import type { Product } from '../types'
 import { useCartStore } from '../store/cart'
 import { resolveImageUrl } from '../utils/url'
 
@@ -76,7 +75,11 @@ const ProductDetailPage = () => {
 
   const breadcrumbs = [
     <Link to='/' style={{textDecoration: 'none', color: theme.palette.primary.main}}>Home</Link>,
-    <Link to='/' style={{textDecoration: 'none', color: theme.palette.primary.main}}>{product.category.name}</Link>,
+    product.category ? (
+      <Link to='/' style={{textDecoration: 'none', color: theme.palette.primary.main}}>{product.category.name}</Link>
+    ) : (
+      <Typography>Kategori</Typography>
+    ),
     <Typography>{product.name}</Typography>
   ]
 

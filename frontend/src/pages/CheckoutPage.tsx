@@ -10,7 +10,7 @@ import {
 } from '@mui/material'
 import { useCartStore } from '../store/cart'
 import { useAuthStore } from '../store/auth'
-import { createOrder } from '../services/api'
+import { createOrder } from '../services'
 
 const CheckoutPage = () => {
   const items = useCartStore((state) => state.items)

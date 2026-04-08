@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { Shop, User } from '../types/api'
-import { fetchCurrentUser, fetchMyShop, loginUser, openShop, registerUser } from '../services/api'
+import type { Shop, User } from '../types'
+import { fetchCurrentUser, fetchMyShop, loginUser, openShop, registerUser } from '../services'
 
 const TOKEN_KEY = 'ecommerce_token'
 

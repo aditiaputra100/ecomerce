@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { SNAP_SCRIPT_URL } from '../config'
-import { fetchMidtransClientKey } from '../services/api'
+import { fetchMidtransClientKey } from '../services'
 
 declare global {
   interface Window {
