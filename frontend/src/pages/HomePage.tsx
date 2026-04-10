@@ -17,8 +17,8 @@ import {
   ArrowLeft as ArrowLeftIcon
 } from '@mui/icons-material'
 import ProductCard from '../components/products/ProductCard'
-import { listProducts } from '../services'
-import type { Product } from '../types'
+import { listProducts, listActiveCampaigns } from '../services'
+import type { Product, CampaignResponse } from '../types'
 import Banner from '../components/Banner'
 import CategoryList from '../components/CategoryList'
 import Timer from '../components/Timer'
@@ -30,6 +30,7 @@ const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [campaign, setCampaign] = useState<CampaignResponse | null>(null)
 
   useEffect(() => {
     const getProducts = async () => {
@@ -52,8 +53,35 @@ const HomePage = () => {
 
   }, [])
 
+  useEffect(() => {
+    const getActiveCampaign = async () => {
+      try {
+        const campaigns = await listActiveCampaigns()
+        if (campaigns.length > 0) {
+          setCampaign(campaigns[0])
+        }
+      } catch (error) {
+        console.error('Failed to fetch active campaigns:', error)
+      }
+    }
+
+    getActiveCampaign()
+  }, [])
+
 
   const productsShowcase = products.slice(0, 8)
+
+  const calculateCampaignSeconds = (): number => {
+    if (!campaign) return 0
+
+    const now = new Date().getTime()
+    const endTime = new Date(campaign.end_time).getTime()
+    const remainingSeconds = Math.floor((endTime - now) / 1000)
+
+    return remainingSeconds > 0 ? remainingSeconds : 0
+  }
+
+  const campaignSeconds = calculateCampaignSeconds()
 
   return (
     <Box>
@@ -63,28 +91,30 @@ const HomePage = () => {
         
         <CategoryList />
 
-        <Box component='section' sx={{bgcolor: 'white', boxShadow: '0 -5px 10px -5px rgba(255, 255, 255, 0.5)'}}>
-          <Container sx={{paddingY: 4}}>
-            <Box display='flex' justifyContent='space-between' alignItems='center' gap={2} marginBottom={4}>
-              <Box display='flex' alignItems='center' gap={2}>
-                <OfflineBoltIcon fontSize='large' />
-                <Typography variant='h5' fontWeight={700}>Flash sale</Typography>
-                <Timer />
+        {campaign && campaignSeconds > 0 && (
+          <Box component='section' sx={{bgcolor: 'white', boxShadow: '0 -5px 10px -5px rgba(255, 255, 255, 0.5)'}}>
+            <Container sx={{paddingY: 4}}>
+              <Box display='flex' justifyContent='space-between' alignItems='center' gap={2} marginBottom={4}>
+                <Box display='flex' alignItems='center' gap={2}>
+                  <OfflineBoltIcon fontSize='large' />
+                  <Typography variant='h5' fontWeight={700}>{campaign.name}</Typography>
+                  <Timer initialSeconds={campaignSeconds} />
+                </Box>
+                <Box display='flex' gap={1}>
+                  <Button variant='outlined' sx={{width: '32px'}}>
+                    <ArrowLeftIcon />
+                  </Button>
+                  <Button variant='contained'>
+                    <ArrowRightIcon />
+                  </Button>
+                </Box>
               </Box>
-              <Box display='flex' gap={1}>
-                <Button variant='outlined' sx={{width: '32px'}}>
-                  <ArrowLeftIcon />
-                </Button>
-                <Button variant='contained'>
-                  <ArrowRightIcon />
-                </Button>
-              </Box>
-            </Box>
-            
-            
+              
+              
 
-          </Container>
-        </Box>
+            </Container>
+          </Box>
+        )}
         <Box component='section' sx={{paddingY: 4,}}>
             <Container>
               <Typography variant='h5' marginBottom={2} fontWeight={700}>Todays For You!</Typography>
