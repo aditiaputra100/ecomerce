@@ -1,6 +1,6 @@
 import {create} from 'zustand'
-import type { Category } from '../types/api'
-import { getCategory } from '../services/api'
+import type { Category } from '../types'
+import { listCategories } from '../services'
 
 interface CategoryState {
     categories: Category[]
@@ -37,7 +37,7 @@ export const useCategory = create<CategoryState>((set, get) => ({
 
         const fetchPromise = (async () => {
             try {
-                const data = await getCategory()
+                const data = await listCategories()
                 set({ categories: data, hasFetched: true, error: null })
             } catch (error) {
                 if (error instanceof Error) {

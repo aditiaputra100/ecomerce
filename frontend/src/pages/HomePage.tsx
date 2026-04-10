@@ -17,8 +17,8 @@ import {
   ArrowLeft as ArrowLeftIcon
 } from '@mui/icons-material'
 import ProductCard from '../components/products/ProductCard'
-import { listProducts } from '../services/api'
-import type { Product } from '../types/api'
+import { listProducts } from '../services'
+import type { Product } from '../types'
 import Banner from '../components/Banner'
 import CategoryList from '../components/CategoryList'
 import Timer from '../components/Timer'

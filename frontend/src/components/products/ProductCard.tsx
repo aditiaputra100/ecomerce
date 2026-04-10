@@ -7,7 +7,7 @@ import {
   useTheme,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
-import type { Product } from '../../types/api'
+import type { Product } from '../../types'
 import { resolveImageUrl } from '../../utils/url'
 import { Link } from 'react-router'
 

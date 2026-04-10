@@ -42,7 +42,7 @@ function CategoryList() {
             }
             {categories.map((category) => (
               <Grid size={{xs: 6, md: 2}} key={category.name}>
-                <Category label={category.name} bgColor={alpha(theme.palette.primary.main, Math.random())} icon={category.icon}/>
+                <Category label={category.name} bgColor={alpha(theme.palette.primary.main, Math.random())} icon={category.icon ?? undefined}/>
               </Grid>
             ))}
           </Grid>

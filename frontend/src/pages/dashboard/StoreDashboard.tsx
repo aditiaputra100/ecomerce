@@ -16,8 +16,8 @@ import {
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
 import { useAuthStore } from '../../store/auth'
-import { createProduct, fetchMyProducts, listShopOrders } from '../../services/api'
-import type { Order, Product } from '../../types/api'
+import { createProduct, fetchMyProducts, listShopOrders } from '../../services'
+import type { Order, Product } from '../../types'
 
 const StoreDashboard = () => {
   const theme = useTheme()
