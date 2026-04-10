@@ -75,10 +75,8 @@ const ProductDetailPage = () => {
 
   const breadcrumbs = [
     <Link to='/' style={{textDecoration: 'none', color: theme.palette.primary.main}}>Home</Link>,
-    product.category ? (
+    product.category && (
       <Link to='/' style={{textDecoration: 'none', color: theme.palette.primary.main}}>{product.category.name}</Link>
-    ) : (
-      <Typography>Kategori</Typography>
     ),
     <Typography>{product.name}</Typography>
   ]
