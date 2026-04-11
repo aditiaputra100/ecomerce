@@ -17,6 +17,29 @@ class CampaignUpdate(BaseModel):
     is_active: bool = True
 
 
+class CampaignProductResponse(BaseModel):
+    """Informasi produk ringkas yang ditampilkan dalam campaign"""
+    id: int
+    name: str
+    price: float
+    image_url: Optional[str] = None
+    slug: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CampaignItemResponse(BaseModel):
+    """Item campaign yang berisi produk dan harga spesial"""
+    id: int
+    product_id: int
+    special_price: float
+    stock_limit: int
+    stock_sold: int
+    products: CampaignProductResponse
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class CampaignResponse(BaseModel):
     id: int
     name: str
@@ -27,3 +50,8 @@ class CampaignResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CampaignWithItemsResponse(CampaignResponse):
+    """Response campaign yang menyertakan daftar produk"""
+    items: list[CampaignItemResponse] = []

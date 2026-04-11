@@ -32,12 +32,12 @@ def create_campaign(
         raise HTTPException(status_code=400, detail=str(err))
 
 
-@router.get("/active", response_model=SuccessResponse[list[schemas.CampaignResponse], None])
+@router.get("/active", response_model=SuccessResponse[list[schemas.CampaignWithItemsResponse], None])
 def get_active_campaigns(db: Session = Depends(get_db)):
     try:
         campaigns = service.get_active_campaign(db)
         campaigns_data = [
-            schemas.CampaignResponse.model_validate(c)
+            schemas.CampaignWithItemsResponse.model_validate(c)
             for c in campaigns
         ]
         return SuccessResponse(message="", data=campaigns_data)
