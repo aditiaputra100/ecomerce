@@ -10,17 +10,18 @@ function CategoryList() {
     const isCategoriesEmpty = categories.length === 0
 
     const theme = useTheme()
+    const categoryAlphas = [0.35, 0.45, 0.55, 0.65, 0.75, 0.85]
 
     return (
         <Container sx={{marginY: 4}}>
           <Stack justifyContent='space-between' alignItems='center' direction='row'>
-            <Typography variant="h5" fontWeight={700}>Belanja Sesuai Kategory</Typography>
+            <Typography variant="h2" fontSize="1.5rem" fontWeight={700}>Belanja Sesuai Kategory</Typography>
             <Button disabled={isCategoriesEmpty} variant="text" color="secondary">
               Lihat semua
             </Button>
 
           </Stack>
-          <Grid container spacing={2} marginTop={2}>
+          <Grid container spacing={2} marginTop={2} alignItems="stretch">
             {error && (
               <Grid size={{ xs: 12 }}>
                 <Alert severity="error">
@@ -30,8 +31,8 @@ function CategoryList() {
             )}
             {isLoading && (
               Array.from({length: 6}, (_, idx) => (
-                <Grid size={{xs: 6, md: 2}} key={idx}>
-                  <Skeleton variant="rounded" height={100} sx={{borderRadius: 4}}/>
+                <Grid size={{xs: 6, md: 2}} key={idx} sx={{ display: 'flex' }}>
+                  <Skeleton variant="rounded" height={120} sx={{borderRadius: 4}}/>
                 </Grid>
               ))
             )}
@@ -40,9 +41,13 @@ function CategoryList() {
                 <EmptyItem description="There are no categories here" />
               )
             }
-            {categories.map((category) => (
-              <Grid size={{xs: 6, md: 2}} key={category.name}>
-                <Category label={category.name} bgColor={alpha(theme.palette.primary.main, Math.random())} icon={category.icon ?? undefined}/>
+            {categories.map((category, index) => (
+              <Grid size={{xs: 6, md: 2}} key={category.name} sx={{ display: 'flex' }}>
+                <Category
+                  label={category.name}
+                  bgColor={alpha(theme.palette.primary.main, categoryAlphas[index % categoryAlphas.length])}
+                  icon={category.icon ?? undefined}
+                />
               </Grid>
             ))}
           </Grid>

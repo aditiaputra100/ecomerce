@@ -39,10 +39,11 @@ def get_active_campaign(db: Session):
         campaigns = (db.query(models.Campaign)
                       .options(
                           joinedload(models.Campaign.items)
-                          .joinedload(models.CampaignItem.products)
+                          .joinedload(models.CampaignItem.product)
                       )
                       .filter(models.Campaign.start_time <= now)
                       .filter(models.Campaign.end_time >= now)
+                      .filter(models.Campaign.is_active == True)
                       .all())
     except DatabaseError as err:
         db.rollback()

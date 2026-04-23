@@ -11,7 +11,7 @@ function Footer() {
                         <Typography variant="h6" fontWeight={700}>
                             {APP_NAME}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="inherit">
                             Let's shop beyond boundaries. Platform belanja online terpercaya dengan berbagai pilihan produk berkualitas.
                         </Typography>
                     </Stack>

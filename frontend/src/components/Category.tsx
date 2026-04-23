@@ -32,15 +32,31 @@ function Category({label, bgColor, icon='extension', href = '/'}: Props) {
             alignItems='center' 
             justifyContent='center'
             sx={{
+                width: '100%',
+                height: '100%',
+                minHeight: 120,
                 borderRadius: 3,
                 padding: 2,
                 textDecoration: 'none',
+                textAlign: 'center',
                 color: getAlpha ? getAlpha >= 0.1 ? theme.palette.primary.contrastText : theme.palette.text.primary : theme.palette.text.primary
             }}>
             <Icon fontSize="large">
                 {icon}
             </Icon>
-            <Typography fontWeight={700} color={theme.palette.text.primary}>{label}</Typography>
+            <Typography
+                fontWeight={700}
+                color={theme.palette.text.primary}
+                sx={{
+                    minHeight: 40,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                }}
+            >
+                {label}
+            </Typography>
         </Stack>
     )
 }

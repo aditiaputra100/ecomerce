@@ -31,7 +31,7 @@ def _ensure_shop_owner(current_user: User) -> bool:
 def _validate_category(db: Session, category_id: Optional[int]):
     if category_id is None:
         return None
-    category = db.query(Category).filter(Category.id == category_id, Category.is_active == True).first()
+    category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found or inactive")
     return category
@@ -184,12 +184,17 @@ def delete_product(
     
     return SuccessResponse(message="Product deleted successfully", data=None)
 
-@router.get("/{product_id}", response_model=SuccessResponse[Product, None])
-def get_product(product_id: int, db: Annotated[Session, Depends(get_db)]):
-    product = service.get_product_by_id(db, product_id)
+@router.get("/{identifier}", response_model=SuccessResponse[Product, None])
+def get_product(identifier: str, db: Annotated[Session, Depends(get_db)]):
+    if identifier.isdigit():
+        product = service.get_product_by_id(db, int(identifier))
+    
+    else:
+        product = service.get_product_by_slug(db, identifier)
+
 
     if not product:
-        raise NotFoundError(name=f"Product with an ID {product_id} is not found")
+        raise NotFoundError(name=f"Product with an identifier {identifier} is not found")
     
     product_response = Product.model_validate(product)
     return SuccessResponse(message="Product retrieved successfully", data=product_response)

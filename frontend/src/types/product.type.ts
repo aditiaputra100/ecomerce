@@ -7,9 +7,10 @@ export interface Product {
   description: string
   price: number
   stock: number
-  image_url?: string | null
+  image_url?: string | undefined
   owner: User
-  category?: Category | null
+  category?: Category | undefined
+  slug: string
 }
 
 export interface ProductInput {

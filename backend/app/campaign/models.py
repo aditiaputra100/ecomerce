@@ -27,4 +27,4 @@ class CampaignItem(TimeStampMixin, Base):
     stock_sold: Mapped[int] = mapped_column(default=0)
 
     campaign = relationship('Campaign', back_populates='items')
-    products = relationship('Product')
+    product = relationship('Product')

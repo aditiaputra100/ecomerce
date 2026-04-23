@@ -20,7 +20,7 @@ import { resolveImageUrl } from '../utils/url'
 
 const ProductDetailPage = () => {
   const theme = useTheme()
-  const { productId } = useParams()
+  const { slug } = useParams()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<boolean>(false)
@@ -28,13 +28,13 @@ const ProductDetailPage = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   useEffect(() => {
-    if (!productId) return
+    if (!slug) return
 
-    async function getProductById() {
-      if (!productId) return
+    async function getProductBySlug() {
+      if (!slug) return
 
       try {
-        const response = await getProduct(productId)
+        const response = await getProduct(slug)
         setProduct(response)
         
       } catch(error) {
@@ -48,9 +48,9 @@ const ProductDetailPage = () => {
       }
     }
 
-    getProductById()
+    getProductBySlug()
 
-  }, [productId])
+  }, [slug])
 
   if (loading) {
     return (

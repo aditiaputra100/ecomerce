@@ -9,8 +9,8 @@ export function listProducts(category?: string, username?: string) {
   return request<Product[]>(`/products${query ? `?${query}` : ''}`)
 }
 
-export function getProduct(productId: string | number) {
-  return request<Product>(`/products/${productId}`)
+export function getProduct(slug: string) {
+  return request<Product>(`/products/${slug}`)
 }
 
 export function fetchMyProducts(token: string) {

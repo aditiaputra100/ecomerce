@@ -19,7 +19,6 @@ class CampaignUpdate(BaseModel):
 
 class CampaignProductResponse(BaseModel):
     """Informasi produk ringkas yang ditampilkan dalam campaign"""
-    id: int
     name: str
     price: float
     image_url: Optional[str] = None
@@ -30,12 +29,11 @@ class CampaignProductResponse(BaseModel):
 
 class CampaignItemResponse(BaseModel):
     """Item campaign yang berisi produk dan harga spesial"""
-    id: int
     product_id: int
     special_price: float
     stock_limit: int
     stock_sold: int
-    products: CampaignProductResponse
+    product: CampaignProductResponse
 
     model_config = ConfigDict(from_attributes=True)
 

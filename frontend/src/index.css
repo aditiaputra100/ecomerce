@@ -68,11 +68,12 @@ footer {
 
 .flash-sale-timer {
   display: flex;
-  border-radius: 32px;
+  border-radius: 8px;
   justify-content: center;
   align-items: center;
-  width: 32px;
-  height: 32px;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 8px;
 }
 
 .slogan-container {

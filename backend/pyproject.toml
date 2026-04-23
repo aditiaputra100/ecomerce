@@ -14,5 +14,6 @@ dependencies = [
     "pytest>=9.0.2",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.22",
+    "python-slugify>=8.0.4",
     "sqlalchemy>=2.0.46",
 ]
