@@ -14,12 +14,6 @@ import ProductCardSale from './products/ProductCardSale'
 type CampaignWithTime = CampaignResponse & { seconds: number }
 
 const CARD_GAP_PX = 16
-const MOBILE_PREVIEW_ITEM_COUNT = 4
-const TABLET_PREVIEW_ITEM_COUNT = 6
-const DESKTOP_PREVIEW_ITEM_COUNT = 9
-const MOBILE_CARDS_PER_VIEW = 2
-const TABLET_CARDS_PER_VIEW = 4
-const DESKTOP_CARDS_PER_VIEW = 5
 
 interface CampaignSliderSectionProps {
   campaign: CampaignWithTime
@@ -28,24 +22,13 @@ interface CampaignSliderSectionProps {
 function Campaign({ campaign }: CampaignSliderSectionProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'))
-  const cardsPerView = isMobile
-    ? MOBILE_CARDS_PER_VIEW
-    : isTablet
-      ? TABLET_CARDS_PER_VIEW
-      : DESKTOP_CARDS_PER_VIEW
-  const previewItemCount = isMobile
-    ? MOBILE_PREVIEW_ITEM_COUNT
-    : isTablet
-      ? TABLET_PREVIEW_ITEM_COUNT
-      : DESKTOP_PREVIEW_ITEM_COUNT
 
   const sectionRef = useRef<HTMLElement | null>(null)
   const sliderRef = useRef<HTMLDivElement | null>(null)
 
   const [scrollState, setScrollState] = useState({ canPrev: false, canNext: false })
 
-  const previewItems = useMemo(() => campaign.items.slice(0, previewItemCount), [campaign.items, previewItemCount])
+  const previewItems = useMemo(() => campaign.items.slice(0, 9), [campaign.items])
 
 
   useEffect(() => {
@@ -57,12 +40,23 @@ function Campaign({ campaign }: CampaignSliderSectionProps) {
     const CONTAINER_INLINE_PADDING = isMobile ? 16 : 24
 
     const applyPadding = () => {
-      const sectionWidth = section.offsetWidth
-
-      const offset = Math.max(0, (sectionWidth - 1200) / 2)
+      const viewportWidth = document.documentElement.clientWidth
+      const sectionWidth = Math.min(section.getBoundingClientRect().width, viewportWidth)
+      const maxContentWidth = 1200
+      const offset = Math.max(0, (sectionWidth - maxContentWidth) / 2)
       const containerPadding = offset + CONTAINER_INLINE_PADDING
 
-      slider.style.setProperty('--flex-width', `calc((100% - ${CARD_GAP_PX * (cardsPerView - 1)}px) / ${cardsPerView})`)
+      const cardsPerView = isMobile ? 2 : sectionWidth < 900 ? 3 : 5
+      const totalCards = previewItems.length + 1 // +1 untuk card CTA
+      const visibleCards = Math.min(cardsPerView, totalCards)
+
+      const sliderClientWidth = Math.max(0, sectionWidth - containerPadding * 2)
+      const cardWidth = Math.max(
+        0,
+        (sliderClientWidth - CARD_GAP_PX * (visibleCards - 1)) / visibleCards,
+      )
+
+      slider.style.setProperty('--flex-width', `${cardWidth}px`)
       slider.style.setProperty('--offset-width', `${containerPadding}px`)
     }
 
@@ -72,7 +66,7 @@ function Campaign({ campaign }: CampaignSliderSectionProps) {
     ro.observe(section)
     return () => ro.disconnect()
 
-  }, [cardsPerView, isMobile])
+  }, [previewItems.length, isMobile])
 
   const updateScrollState = useCallback(() => {
     const slider = sliderRef.current
@@ -87,7 +81,7 @@ function Campaign({ campaign }: CampaignSliderSectionProps) {
 
   useEffect(() => {
     updateScrollState()
-  }, [cardsPerView, previewItems.length, updateScrollState])
+  }, [previewItems.length, updateScrollState])
 
   const scrollByCard = useCallback((dir: number) => {
     const slider = sliderRef.current
@@ -105,9 +99,6 @@ function Campaign({ campaign }: CampaignSliderSectionProps) {
       component="section"
       ref={sectionRef}
       sx={{
-        width: '100%',
-        maxWidth: '100%',
-        minWidth: 0,
         bgcolor: 'white',
         overflowX: 'hidden',
         boxSizing: 'border-box',
@@ -168,7 +159,7 @@ function Campaign({ campaign }: CampaignSliderSectionProps) {
               <Box
                 key={item.product_id}
                 sx={{
-                  flex: '0 0 var(--flex-width)',
+                  flex: `0 0 var(--flex-width)`,
                   minWidth: 0,
                 }}
               >
@@ -185,7 +176,7 @@ function Campaign({ campaign }: CampaignSliderSectionProps) {
             ))}
             <Card
               sx={{
-                flex: '0 0 var(--flex-width)',
+                flex: `0 0 var(--flex-width)`,
                 borderRadius: 3,
                 textDecoration: 'none',
                 border: '1px solid',
@@ -209,7 +200,7 @@ function Campaign({ campaign }: CampaignSliderSectionProps) {
                 </CardContent>
               </CardActionArea>
             </Card>
-          </Box>
+        </Box>
     </Box>
   )
 }

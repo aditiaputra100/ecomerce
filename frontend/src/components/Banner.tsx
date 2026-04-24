@@ -39,6 +39,8 @@ function Banner() {
                     position: 'absolute',
                     inset: 0,
                     width: '100%',
+                    maxWidth: '100%',
+                    display: 'block',
                     height: '100%',
                     objectFit: 'cover',
                     opacity: idx === activeBanner ? 1 : 0,

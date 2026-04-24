@@ -15,7 +15,7 @@ function MainLayout() {
   return (
     <Box className='app-container'>
       <AppNavbar />
-      <Box component='main'>
+      <Box component='main' sx={{ pb: isMobile ? '72px' : 0 }}>
         <Outlet />
       </Box>
       {
