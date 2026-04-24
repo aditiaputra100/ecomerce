@@ -6,7 +6,6 @@ import { Link } from "react-router-dom"
 import { resolveImageUrl } from "../../utils/url"
 
 interface ProductCardSaleProps {
-    product_id: number
     slug: string
     name: string
     sale_price: number
@@ -14,22 +13,17 @@ interface ProductCardSaleProps {
     image_url: string
     stock_limit: number
     stock_sold: number
-    variant?: 'grid' | 'slider'
 }
 
-function ProductCardSale({ product_id, slug, name, sale_price, original_price, image_url, stock_limit, stock_sold, variant = 'grid' }: ProductCardSaleProps) {
+function ProductCardSale({slug, name, sale_price, original_price, image_url, stock_limit, stock_sold, }: ProductCardSaleProps) {
     const theme = useTheme()
-    const isSlider = variant === 'slider'
     const [wishlisted, setWishlisted] = useState(false)
-
-    const discountPct = Math.round((1 - sale_price / original_price) * 100)
 
     return (
         <Card
             sx={{
                 position: 'relative',
                 width: '100%',
-                maxWidth: isSlider ? 'none' : { xs: '100%', sm: 320, md: 340 },
                 minWidth: 0,
                 boxSizing: 'border-box',
                 height: '100%',

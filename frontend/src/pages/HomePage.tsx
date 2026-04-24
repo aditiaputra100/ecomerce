@@ -84,7 +84,7 @@ const HomePage = () => {
   const productsShowcase = products.slice(0, 8)
 
   return (
-    <Box>
+    <>
       {!isMobile && <Banner />}
 
       <CategoryList />
@@ -140,7 +140,7 @@ const HomePage = () => {
           <h2 className="slogan-text">Let's Shop Beyond Boundaries</h2>
         </Stack>
       </Box>
-    </Box>
+    </>
   )
 }
 

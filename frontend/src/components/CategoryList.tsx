@@ -13,7 +13,7 @@ function CategoryList() {
     const categoryAlphas = [0.35, 0.45, 0.55, 0.65, 0.75, 0.85]
 
     return (
-        <Container sx={{marginY: 4}}>
+        <Container component='section' sx={{marginY: 4}}>
           <Stack justifyContent='space-between' alignItems='center' direction='row'>
             <Typography variant="h2" fontSize="1.5rem" fontWeight={700}>Belanja Sesuai Kategory</Typography>
             <Button disabled={isCategoriesEmpty} variant="text" color="secondary">

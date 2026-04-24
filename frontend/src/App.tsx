@@ -14,6 +14,7 @@ import OpenShopPage from './pages/dashboard/OpenShopPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 import { useAuthStore } from './store/auth'
 import { useCategory } from './store/category'
+import './App.css'
 
 function App() {
   const bootstrap = useAuthStore((state) => state.bootstrap)
