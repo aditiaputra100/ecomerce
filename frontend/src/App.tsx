@@ -8,11 +8,13 @@ import RegisterPage from './pages/RegisterPage'
 import CartPage from './pages/CartPage'
 import CheckoutPage from './pages/CheckoutPage'
 import CheckoutStatusPage from './pages/CheckoutStatusPage'
+import CampaignDetailPage from './pages/CampaignDetailPage'
 import StoreDashboard from './pages/dashboard/StoreDashboard'
 import OpenShopPage from './pages/dashboard/OpenShopPage'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 import { useAuthStore } from './store/auth'
 import { useCategory } from './store/category'
+import './App.css'
 
 function App() {
   const bootstrap = useAuthStore((state) => state.bootstrap)
@@ -30,7 +32,8 @@ function App() {
     <Routes>
       <Route element={<MainLayout />}>
         <Route index element={<HomePage />} />
-        <Route path="/p/:productId" element={<ProductDetailPage />} />
+        <Route path="/p/:slug" element={<ProductDetailPage />} />
+        <Route path="/campaign/:campaignId" element={<CampaignDetailPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route
           path="/checkout"

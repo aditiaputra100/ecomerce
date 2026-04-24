@@ -135,6 +135,14 @@ def get_product_by_id(db: Session, product_id: int):
 
     return product
 
+def get_product_by_slug(db: Session, slug: str):
+    product = db.query(models.Product).filter(models.Product.slug == slug).first()
+    
+    if product and not product.is_publish:
+        raise ResourceDisableError(name=f"{product.name} is not publish")
+
+    return product
+
 def get_product_for_owner(db: Session, product_id: int, user_id: int):
     product = get_product_unchecked(db, product_id)
     if product and product.user_id == user_id:

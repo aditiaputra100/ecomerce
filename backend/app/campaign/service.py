@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import DatabaseError, IntegrityError
 from datetime import datetime, timezone
 from . import models
@@ -37,8 +37,13 @@ def get_active_campaign(db: Session):
 
     try:
         campaigns = (db.query(models.Campaign)
+                      .options(
+                          joinedload(models.Campaign.items)
+                          .joinedload(models.CampaignItem.product)
+                      )
                       .filter(models.Campaign.start_time <= now)
                       .filter(models.Campaign.end_time >= now)
+                      .filter(models.Campaign.is_active == True)
                       .all())
     except DatabaseError as err:
         db.rollback()

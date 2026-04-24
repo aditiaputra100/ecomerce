@@ -1,8 +1,10 @@
 import {
   Alert,
+  Box,
   Button,
   Card,
   CardContent,
+  Container,
   IconButton,
   Stack,
   Table,
@@ -26,10 +28,12 @@ const CartPage = () => {
   }
 
   return (
+    <Container sx={{ py: 4 }}>
     <Stack spacing={3}>
       <Typography variant="h4">Keranjang</Typography>
       <Card>
         <CardContent>
+          <Box sx={{ overflowX: 'auto' }}>
           <Table>
             <TableHead>
               <TableRow>
@@ -58,6 +62,7 @@ const CartPage = () => {
               ))}
             </TableBody>
           </Table>
+          </Box>
         </CardContent>
       </Card>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -67,6 +72,7 @@ const CartPage = () => {
         </Button>
       </Stack>
     </Stack>
+    </Container>
   )
 }
 

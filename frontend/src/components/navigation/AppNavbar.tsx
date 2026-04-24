@@ -117,6 +117,7 @@ const AppNavbar = () => {
                   gap: 1,
                   flexGrow: 1,
                   justifyContent: 'flex-end',
+                  minWidth: 0,
                 }}
               >
                 <Paper

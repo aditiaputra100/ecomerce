@@ -17,7 +17,7 @@ class Product(ProductBase):
     id: int
     owner: User
     image_url: Optional[str]
-    category: Optional[CategorySchema]
+    slug: str
 
     model_config = ConfigDict(from_attributes=True)
 
