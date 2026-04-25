@@ -1,4 +1,3 @@
-from pathlib import Path
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -51,37 +50,45 @@ def _fake_image(filename="photo.jpg", size=1024):
     img.size = size
     img.file.read.return_value = b"\x00" * size
     return img
-
-
-def _storage_path(filename: str) -> str:
-    return str(Path(service.__file__).resolve().parents[1] / "static" / "uploads" / "products" / filename)
-
-
 # ──────────────────────────────────────────────
 #  delete_image
 # ──────────────────────────────────────────────
 
 class TestDeleteImage:
-    @patch("app.products.service.os.remove")
-    @patch("app.products.service.os.path.exists", return_value=True)
-    def test_delete_existing_file(self, mock_exists, mock_remove):
+    def test_delete_existing_file(self):
+        service.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        target = service.UPLOAD_DIR / "abc.jpg"
+        target.write_bytes(b"test")
+
         result = service.delete_image("/static/uploads/products/abc.jpg")
 
-        mock_exists.assert_called_once_with(_storage_path("abc.jpg"))
-        mock_remove.assert_called_once_with(_storage_path("abc.jpg"))
         assert result is True
+        assert not target.exists()
 
-    @patch("app.products.service.os.remove")
-    @patch("app.products.service.os.path.exists", return_value=False)
-    def test_delete_nonexistent_file(self, mock_exists, mock_remove):
+    def test_delete_nonexistent_file(self):
+        target = service.UPLOAD_DIR / "missing.jpg"
+        if target.exists():
+            target.unlink()
+
         result = service.delete_image("/static/uploads/products/missing.jpg")
 
-        mock_remove.assert_not_called()
         assert result is False
 
     def test_delete_empty_url(self):
         assert service.delete_image("") is False
         assert service.delete_image(None) is False
+
+    def test_rejects_path_traversal(self):
+        sentinel = service.STATIC_DIR / "ecommerce.db"
+        sentinel.write_text("keep me")
+
+        try:
+            result = service.delete_image("/static/uploads/products/../../ecommerce.db")
+
+            assert result is False
+            assert sentinel.exists()
+        finally:
+            sentinel.unlink()
 
 
 # ──────────────────────────────────────────────

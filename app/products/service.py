@@ -1,7 +1,7 @@
+import os
 import uuid
 from pathlib import Path
 
-import os
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 from app.exceptions import ResourceDisableError, FileMaximumError
@@ -9,7 +9,8 @@ from app.user.models import User
 from app.categories.service import get_category
 from . import models, schemas
 
-UPLOAD_DIR = Path(__file__).resolve().parents[1] / "static" / "uploads" / "products"
+STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
+UPLOAD_DIR = STATIC_DIR / "uploads" / "products"
 
 def save_image(file: UploadFile) -> str:
     max_size_5_mb = 5 * 1024 * 1024
@@ -37,10 +38,16 @@ def delete_image(image_url: str) -> bool:
     if not image_url:
         return False
 
-    file_path = str(Path(__file__).resolve().parents[1] / image_url.lstrip("/"))
+    file_path = (Path(__file__).resolve().parents[1] / image_url.lstrip("/")).resolve()
+    upload_dir = UPLOAD_DIR.resolve()
 
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    try:
+        file_path.relative_to(upload_dir)
+    except ValueError:
+        return False
+
+    if file_path.exists():
+        file_path.unlink()
         return True
 
     return False
