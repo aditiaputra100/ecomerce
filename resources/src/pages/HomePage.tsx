@@ -17,6 +17,7 @@ import Banner from '../components/Banner'
 import CategoryList from '../components/CategoryList'
 import EmptyItem from '../components/EmptyItem'
 import Campaign from '../components/Campaign'
+import './HomePage.css'
 
 type CampaignWithTime = CampaignResponse & { seconds: number }
 
