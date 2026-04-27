@@ -23,6 +23,11 @@ h1 {
   margin: 0;
 }
 
+footer {
+  background-color: var(--app-primary-main);
+  color: #f6f5f5;
+}
+
 #root {
   min-height: 100vh;
 }
