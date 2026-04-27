@@ -12,19 +12,75 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { APP_NAME } from '../config'
 
+const USERNAME_MIN_LENGTH = 3
+const PASSWORD_MIN_LENGTH = 8
+
+type RegisterFormState = {
+  username: string
+  email: string
+  password: string
+  confirmPassword: string
+}
+
+type RegisterField = keyof RegisterFormState
+type RegisterErrors = Partial<Record<RegisterField, string>>
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validateRegisterForm(form: RegisterFormState): RegisterErrors {
+  const errors: RegisterErrors = {}
+  const username = form.username.trim()
+  const email = form.email.trim()
+
+  if (!username) {
+    errors.username = 'Username wajib diisi.'
+  } else if (username.length < USERNAME_MIN_LENGTH) {
+    errors.username = `Username minimal ${USERNAME_MIN_LENGTH} karakter.`
+  }
+
+  if (!email) {
+    errors.email = 'Email wajib diisi.'
+  } else if (!emailPattern.test(email)) {
+    errors.email = 'Format email tidak valid.'
+  }
+
+  if (!form.password) {
+    errors.password = 'Password wajib diisi.'
+  } else if (form.password.length < PASSWORD_MIN_LENGTH) {
+    errors.password = `Password minimal ${PASSWORD_MIN_LENGTH} karakter.`
+  }
+
+  if (!form.confirmPassword) {
+    errors.confirmPassword = 'Konfirmasi password wajib diisi.'
+  } else if (form.confirmPassword !== form.password) {
+    errors.confirmPassword = 'Konfirmasi password harus sama dengan password.'
+  }
+
+  return errors
+}
+
 const RegisterPage = () => {
   const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
   const register = useAuthStore((state) => state.register)
   const loading = useAuthStore((state) => state.loading)
   const error = useAuthStore((state) => state.error)
-  const [form, setForm] = useState({ username: '', email: '', password: '' })
+  const [form, setForm] = useState<RegisterFormState>({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  })
+  const [errors, setErrors] = useState<RegisterErrors>({})
+  const [touched, setTouched] = useState<Partial<Record<RegisterField, boolean>>>({})
   const formGridRef = useRef<HTMLDivElement | null>(null)
   const [formGridHeight, setFormGridHeight] = useState<number>(0)
 
@@ -44,26 +100,73 @@ const RegisterPage = () => {
     return () => {
       observer.disconnect()
     }
-  }, [])
+  }, [isMobile])
 
   const handleInputChange =
-    (field: 'username' | 'email' | 'password') =>
+    (field: RegisterField) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setForm((prev) => ({ ...prev, [field]: event.target.value }))
+      const value = event.target.value
+      const nextForm = { ...form, [field]: value }
+      setForm(nextForm)
+
+      if (touched[field] || (field === 'password' && touched.confirmPassword)) {
+        setErrors(validateRegisterForm(nextForm))
+      }
     }
+
+  const handleFieldBlur = (field: RegisterField) => {
+    setTouched((prev) => ({ ...prev, [field]: true }))
+    setErrors(validateRegisterForm(form))
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    await register(form)
-    navigate('/login')
+    const nextTouched: Record<RegisterField, boolean> = {
+      username: true,
+      email: true,
+      password: true,
+      confirmPassword: true,
+    }
+
+    setTouched(nextTouched)
+
+    const validationErrors = validateRegisterForm(form)
+    setErrors(validationErrors)
+    if (Object.keys(validationErrors).length > 0) {
+      return
+    }
+
+    try {
+      await register({
+        username: form.username.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      })
+      navigate('/login')
+    } catch {
+      // error handled via store
+    }
   }
 
   return (
-    <Grid minHeight="100vh" padding={2} container alignItems="flex-start">
-      <Grid size={6} my={2} ref={formGridRef}>
+    <Grid 
+      minHeight="100vh" 
+      maxWidth='lg' 
+      padding={2} 
+      alignItems="center"  
+      marginX='auto'
+      container
+    >
+      <Grid size={{md: 12, lg: 6}} my={2} ref={formGridRef}>
         <Box component='header'>
           <Container>
-            <Typography component={Link} href='/' underline='none' color={theme.palette.text.primary} variant='h1'>
+            <Typography
+              component={RouterLink}
+              to='/'
+              color={theme.palette.text.primary}
+              sx={{ textDecoration: 'none' }}
+              variant='h1'
+            >
               {APP_NAME}
             </Typography>
           </Container>
@@ -90,14 +193,22 @@ const RegisterPage = () => {
                     id='username'
                     value={form.username}
                     onChange={handleInputChange('username')}
+                    onBlur={() => handleFieldBlur('username')}
+                    error={Boolean(touched.username && errors.username)}
+                    helperText={touched.username ? errors.username : undefined}
                   />
                 </FormControl>
-                <FormControl fullWidth required inputMode='email'>
+                <FormControl fullWidth required>
                   <FormLabel htmlFor="email">Email</FormLabel>
                   <TextField
                     id='email'
+                    type='email'
+                    inputProps={{ inputMode: 'email' }}
                     value={form.email}
                     onChange={handleInputChange('email')}
+                    onBlur={() => handleFieldBlur('email')}
+                    error={Boolean(touched.email && errors.email)}
+                    helperText={touched.email ? errors.email : undefined}
                   />
                 </FormControl>
                 <FormControl fullWidth required>
@@ -107,11 +218,22 @@ const RegisterPage = () => {
                     type='password'
                     value={form.password}
                     onChange={handleInputChange('password')}
+                    onBlur={() => handleFieldBlur('password')}
+                    error={Boolean(touched.password && errors.password)}
+                    helperText={touched.password ? errors.password : undefined}
                   />
                 </FormControl>
                 <FormControl fullWidth required>
                   <FormLabel htmlFor="confirm-password">Confirm Password</FormLabel>
-                  <TextField id='confirm-password' type='password'/>
+                  <TextField
+                    id='confirm-password'
+                    type='password'
+                    value={form.confirmPassword}
+                    onChange={handleInputChange('confirmPassword')}
+                    onBlur={() => handleFieldBlur('confirmPassword')}
+                    error={Boolean(touched.confirmPassword && errors.confirmPassword)}
+                    helperText={touched.confirmPassword ? errors.confirmPassword : undefined}
+                  />
                 </FormControl>
                 <Button type="submit" variant="contained" disabled={loading} size='large'>
                   {loading ? 'Memproses...' : 'Daftar'}
@@ -120,7 +242,10 @@ const RegisterPage = () => {
                 <Divider color={theme.palette.text.secondary}>Atau Daftar Dengan</Divider>
 
                 <Typography align='center' >
-                  Sudah punya akun? <Link underline='none' href='/login' color={theme.palette.primary.main}>Masuk</Link>
+                  Sudah punya akun?{' '}
+                  <Link component={RouterLink} underline='none' to='/login' color={theme.palette.primary.main}>
+                    Masuk
+                  </Link>
                 </Typography>
               </Stack>
             </Container>
@@ -147,7 +272,7 @@ const RegisterPage = () => {
         size={6}
         my={2}
         sx={{
-          display: 'flex',
+          display: isMobile ? 'none' : 'flex',
           height: formGridHeight > 0 ? `${formGridHeight}px` : 'auto',
         }}
       >
