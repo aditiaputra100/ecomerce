@@ -3,7 +3,7 @@
     "target": "ES2023",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["node", "vite/client"],
+    "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -18,5 +18,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["resources", "vite.config.ts"]
+  "include": ["resources", "test/frontend", "vite.config.ts"]
 }

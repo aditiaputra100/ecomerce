@@ -1,3 +1,5 @@
+/// <reference types="vitest/config" />
+
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -33,6 +35,13 @@ export default defineConfig(({ mode }) => {
         },
       },
       port: frontendPort,
+    },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      css: true,
+      setupFiles: 'test/frontend/setup.ts',
+      include: ['resources/src/**/*.test.{ts,tsx}', 'test/frontend/**/*.test.{ts,tsx}'],
     },
   }
 })
