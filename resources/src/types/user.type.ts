@@ -2,6 +2,7 @@ export interface User {
   id: number
   username: string
   email: string
+  has_shop: boolean
 }
 
 export interface Token {
@@ -9,4 +10,8 @@ export interface Token {
   token_type: string
 }
 
-export type AuthTokenResponse = Token
+export interface AuthSessionResponse extends Token {
+  user: User
+}
+
+export type AuthTokenResponse = AuthSessionResponse

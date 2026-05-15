@@ -101,6 +101,6 @@ describe('RegisterPage', () => {
         password: 'password123',
       })
     })
-    expect(mocks.navigate).toHaveBeenCalledWith('/login')
+    expect(mocks.navigate).toHaveBeenCalledWith('/')
   })
 })

@@ -3,9 +3,11 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Container,
   Divider,
   FormControl,
+  FormControlLabel,
   FormLabel,
   Grid,
   Link,
@@ -28,7 +30,7 @@ const LoginPage = () => {
   const login = useAuthStore((state) => state.login)
   const loading = useAuthStore((state) => state.loading)
   const error = useAuthStore((state) => state.error)
-  const [form, setForm] = useState({ username: '', password: '' })
+  const [form, setForm] = useState({ username: '', password: '', rememberMe: false })
   const formGridRef = useRef<HTMLDivElement | null>(null)
   const [formGridHeight, setFormGridHeight] = useState<number>(0)
 
@@ -50,14 +52,17 @@ const LoginPage = () => {
     }
   }, [isMobile])
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
-    try {
-      await login(form)
+
+    const success = await login({
+      username: form.username,
+      password: form.password,
+    })
+    
+    if (success) {
       const redirect = (location.state as { from?: Location })?.from?.pathname ?? '/'
       navigate(redirect)
-    } catch {
-      // error handled via store
     }
   }
 
@@ -95,7 +100,12 @@ const LoginPage = () => {
             </Typography>
           </Box>
 
-          {error && <Alert severity="error">{error}</Alert>}
+          <Box my={2}>
+            <Container>
+              {error && <Alert severity="error">{error}</Alert>}
+            </Container>
+          </Box>
+
 
           <Box component='form' onSubmit={handleSubmit} my={2}>
             <Container maxWidth='sm'>
@@ -116,6 +126,18 @@ const LoginPage = () => {
                     type='password'
                     value={form.password}
                     onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                  />
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={form.rememberMe}
+                        onChange={(event) => setForm((prev) => ({ ...prev, rememberMe: event.target.checked }))}
+                      />
+                    }
+                    label="Ingat saya?"
                   />
                 </FormControl>
 

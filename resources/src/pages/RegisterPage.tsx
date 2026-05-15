@@ -142,7 +142,7 @@ const RegisterPage = () => {
         email: form.email.trim(),
         password: form.password,
       })
-      navigate('/login')
+      navigate('/')
     } catch {
       // error handled via store
     }
