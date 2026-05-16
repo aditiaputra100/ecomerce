@@ -50,14 +50,14 @@ describe('LoginPage', () => {
     vi.clearAllMocks()
     mocks.locationState = null
     setAuthStoreState({
-      login: vi.fn().mockResolvedValue(undefined),
+      login: vi.fn().mockResolvedValue(true),
       loading: false,
       error: null,
     })
   })
 
   it('calls login and redirects using location.state.from pathname', async () => {
-    const loginMock = vi.fn().mockResolvedValue(undefined)
+    const loginMock = vi.fn().mockResolvedValue(true)
     setAuthStoreState({ login: loginMock, loading: false, error: null })
     mocks.locationState = { from: { pathname: '/checkout' } }
 

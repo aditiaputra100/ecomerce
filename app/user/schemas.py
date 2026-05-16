@@ -1,10 +1,11 @@
-from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 from typing import Optional
 
 
 class UserBase(BaseModel):
     username: str
     email: EmailStr
+    has_shop: bool = False
 
 
 class UserCreate(UserBase):
@@ -29,8 +30,12 @@ class User(UserBase):
 
 class Token(BaseModel):
     access_token: str
-    token_type: str
+    token_type: str = "bearer"
+
+
+class AuthSession(Token):
+    user: User
 
 class TokenData(BaseModel):
     username: Optional[str] = None
-    scopes: list[str] = []
+    scopes: list[str] = Field(default_factory=list)

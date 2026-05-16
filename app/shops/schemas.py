@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from app.user.schemas import User
 
 

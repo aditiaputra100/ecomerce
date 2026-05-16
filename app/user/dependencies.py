@@ -43,8 +43,7 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
 
     if user is None:
         raise credentials_exception
-    print(security_scopes.scopes)
-    print(token_data.scopes)
+
     for scope in security_scopes.scopes:
         if scope not in token_data.scopes:
             raise HTTPException(
