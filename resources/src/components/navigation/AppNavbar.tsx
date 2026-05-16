@@ -101,9 +101,11 @@ const AppNavbar = () => {
       <IconButton aria-label="notification">
         <Notifications />
       </IconButton>
-      <IconButton aria-label="user menu" onMouseEnter={handleOpenUserMenu}>
-        <AccountCircle />
-      </IconButton>
+      {!isMobile && (
+        <IconButton aria-label="user menu" onMouseEnter={handleOpenUserMenu}>
+          <AccountCircle />
+        </IconButton>
+      )}
     </>
   )
 
