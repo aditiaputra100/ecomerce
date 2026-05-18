@@ -7,7 +7,6 @@ import {
   Skeleton,
   Stack,
   Typography,
-  useMediaQuery,
   useTheme,
 } from '@mui/material'
 import ProductCard from '../components/products/ProductCard'
@@ -31,7 +30,7 @@ function calculateCampaignSeconds(endTime: string): number {
 
 const HomePage = () => {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  // const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -86,7 +85,7 @@ const HomePage = () => {
 
   return (
     <>
-      {!isMobile && <Banner />}
+      <Banner />
 
       <CategoryList />
 
@@ -107,7 +106,7 @@ const HomePage = () => {
 
       <Box component="section" sx={{ paddingY: 4 }}>
         <Container>
-          <Typography variant="h2" fontSize="1.5rem" marginBottom={2} fontWeight={700}>
+          <Typography variant="h2" marginBottom={2}>
             Todays For You!
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}

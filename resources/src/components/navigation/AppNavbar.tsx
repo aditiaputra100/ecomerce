@@ -33,6 +33,7 @@ import { useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { APP_NAME } from '../../config'
 import { useAuthStore } from '../../store/auth'
+import { useCategory } from '../../store/category'
 
 const AppNavbar = () => {
   const theme = useTheme()
@@ -42,6 +43,7 @@ const AppNavbar = () => {
   const [category, setCategory] = useState('')
   const [height, setHeight] = useState(0)
   const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null)
+  const categories = useCategory((s) => s.categories)
 
   const token = useAuthStore((state) => state.token)
   const profile = useAuthStore((state) => state.profile)
@@ -219,9 +221,11 @@ const AppNavbar = () => {
                       input={<OutlinedInput notched={false} />}
                     >
                       <MenuItem value="">All Categories</MenuItem>
-                      <MenuItem value="fashion">Baju</MenuItem>
-                      <MenuItem value="electronics">Elektronik</MenuItem>
-                      <MenuItem value="others">Apapun</MenuItem>
+                      {categories.map((cat) => (
+                        <MenuItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 )}

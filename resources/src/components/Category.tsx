@@ -1,4 +1,4 @@
-import { alpha, Stack, Typography, useTheme } from "@mui/material"
+import { alpha, Box, Stack, Typography, useTheme } from "@mui/material"
 import Icon from '@mui/material/Icon'
 
 interface Props {
@@ -26,24 +26,33 @@ function Category({label, bgColor, icon='extension', href = '/'}: Props) {
     return (
         <Stack 
             component='a' 
-            bgcolor={bgColor || alpha(theme.palette.primary.main, 0.5)}
             href={href} 
             spacing={2} 
             alignItems='center' 
             justifyContent='center'
             sx={{
-                width: '100%',
                 height: '100%',
                 minHeight: 120,
-                borderRadius: 3,
-                padding: 2,
                 textDecoration: 'none',
+                flex: `0 0 var(--flex-width)`,
                 textAlign: 'center',
                 color: getAlpha ? getAlpha >= 0.1 ? theme.palette.primary.contrastText : theme.palette.text.primary : theme.palette.text.primary
             }}>
-            <Icon fontSize="large">
-                {icon}
-            </Icon>
+            <Box
+                width={64}
+                height={64}
+                display='flex'
+                alignItems='center'
+                justifyContent='center'
+                border='2px solid'
+                borderColor={bgColor || alpha(theme.palette.primary.main, 0.1)}
+                borderRadius={3}
+                color={getAlpha ? getAlpha >= 0.1 ? theme.palette.primary.contrastText : theme.palette.text.primary : theme.palette.text.primary}
+            >
+                <Icon fontSize="large">
+                    {icon}
+                </Icon>
+            </Box>
             <Typography
                 fontWeight={700}
                 color={theme.palette.text.primary}

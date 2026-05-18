@@ -114,9 +114,11 @@ const ProductDetailPage = () => {
   )
 
   return (
-    <Box py={4}>
+    <Box component='section' sx={{
+      bgcolor: theme.palette.background.paper
+    }} py={4}>
       <Container>
-        <Breadcrumbs separator='>' aria-label='breadcrumb'>
+        <Breadcrumbs separator='/' aria-label='breadcrumb'>
           {breadcrumbs}
         </Breadcrumbs>
         <Stack direction={{ xs: 'column', md: 'row' }} marginTop={2}>
