@@ -102,13 +102,14 @@ function Campaign({ campaign }: CampaignSliderSectionProps) {
         bgcolor: 'white',
         overflowX: 'hidden',
         boxSizing: 'border-box',
+        py: 4,
       }}
     >
-        <Container maxWidth="lg" sx={{ pt: 4, pb: 3 }}>
+        <Container maxWidth="lg">
           <Box display="flex" justifyContent="space-between" alignItems="center" gap={2} mb={3}>
             <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
               {!isMobile && <OfflineBoltIcon fontSize="large" />}
-              <Typography variant="h2" fontSize="1.5rem" fontWeight={700}>
+              <Typography variant="h2">
                 {campaign.name}
               </Typography>
               <Timer initialSeconds={campaign.seconds} />

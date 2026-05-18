@@ -5,7 +5,6 @@ import { listCategories } from '../services'
 interface CategoryState {
     categories: Category[]
     isLoading: boolean
-    error: string | null
     hasFetched: boolean
     fetchCategories: (options?: { force?: boolean }) => Promise<void>
 }
@@ -33,18 +32,14 @@ export const useCategory = create<CategoryState>((set, get) => ({
             return Promise.resolve()
         }
 
-        set({ isLoading: true, error: null })
+        set({ isLoading: true})
 
         const fetchPromise = (async () => {
             try {
                 const data = await listCategories()
-                set({ categories: data, hasFetched: true, error: null })
-            } catch (error) {
-                if (error instanceof Error) {
-                    set({ error: error.message })
-                } else {
-                    set({ error: 'Failed to fetch categories' })
-                }
+                set({ categories: data, hasFetched: true })
+            } catch {
+                set({categories: []})
             } finally {
                 set({ isLoading: false })
                 fetchPromiseRef = null
